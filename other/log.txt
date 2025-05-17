@@ -1,0 +1,2 @@
+[CONSOLE] Program exited with error code: 103
+[CONSOLE] Sprite id: 0
