@@ -1,0 +1,1 @@
+C:\msys64\usr\bin\bash.exe -c "g++ -fdiagnostics-color=always -g -I ../includes ../src/*.cpp -o build.exe"
