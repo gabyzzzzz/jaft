@@ -84,11 +84,11 @@ void Window::set_font_settings(unsigned int f_height, unsigned int f_width)
     if (hConsole == INVALID_HANDLE_VALUE) log(201);
     CONSOLE_FONT_INFOEX cfi;
     cfi.cbSize = sizeof(cfi);
-    if (!GetCurrentConsoleFontEx(hConsole, FALSE, &cfi)) log(201);
+    if (!GetCurrentConsoleFontEx(hConsole, TRUE, &cfi)) log(201);
     cfi.dwFontSize.X = f_width;
     cfi.dwFontSize.Y = f_height;
-    wcscpy(cfi.FaceName, L"Consolas");
-    if (!SetCurrentConsoleFontEx(hConsole, FALSE, &cfi)) log(201);
+    wcscpy(cfi.FaceName, L"Cascadia Mono");
+    if (!SetCurrentConsoleFontEx(hConsole, TRUE, &cfi)) log(201);
     font_size_height = f_height;
     font_size_width = f_width;
 }
