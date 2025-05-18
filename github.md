@@ -22,7 +22,7 @@
 
     'git switch main' 
 
-    ștergi branch-ul
+    ștergi branch-ul (doar local, de pe remote, adică pe github se face din pull request sau cu o comandă în terminal, dar e maio simplu din pull request pe github, în browser)
 
     'git branch -d nume-branch'
 
@@ -33,3 +33,40 @@
 ### Afișare branch
 
     'git branch'
+
+
+## Commit-uri, înainte de push, fac valabile schimbările la următorul push pe remote (origin)
+
+### trebuie să vezi statusul întâi
+
+    git status
+
+### după adaugi ce vrei să intre în commit (asigurându-te la finalul comenzii cu git status că s-au adăugat)
+
+    git add nume-fișier
+
+### commit-ul în sine
+
+    git commit -m "mesaj commit"
+
+
+## Push, Pull, no legs (cum pui de pe mașina locală pe remote și cum iei de pe aia remote și pui pe aia locală)
+
+### Cum updatezi pe mașina locală (PULL)
+
+    git pull
+
+### Cum pui pe cea remote, pe github, (PUSH) un branch, nu dai push lui main decât dacă sunt lucruri care sigur merg
+
+cu pull request
+
+    git push -u origin nume-branch
+
+apoi schimbi pe main cu 
+
+    git switch main
+
+și ștergi nume-branch
+
+    git branch -d nume-branch
+
