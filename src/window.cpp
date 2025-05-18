@@ -2,16 +2,17 @@
 #include "../includes/defines.h"
 #include "../includes/classes.h"
 
-namespace Config
-{
-int FPS;
+namespace Config {
+    int FPS;
 };
 
-void log(int err_code, int sprite_label)
-{
-    ofstream lg("log.txt");
-    if (!lg.is_open())
-    {
+bool compare(Sprite* s1, Sprite* s2) {
+    return (s1->stage < s2->stage);
+}
+
+void log(int err_code, int sprite_label) {
+    ofstream lg("log.txt", ios::app);
+    if (!lg.is_open()) {
         cout << 999;
         cin.get();
         exit(err_code);
@@ -22,14 +23,12 @@ void log(int err_code, int sprite_label)
     exit(err_code);
 }
 
-void Window::config()
-{
+void Window::config() {
     ifstream conf("settings.config");
     if (!conf.is_open()) log(101, 0);
 
     int dummy;
-    if (!(conf >> dummy))
-    {
+    if (!(conf >> dummy)) {
         //Daca fisierul config este gol
         cout << "[CONFIG] The settings file is empty. Using the standard options.\n";
         conf.close();
@@ -42,8 +41,7 @@ void Window::config()
         return;
     }
 
-    if (conf >> Config::FPS)
-    {
+    if (conf >> Config::FPS) {
         //Daca fisierul nu este gol
         if (Config::FPS < 1 || Config::FPS > 144) log(103);
     }
@@ -51,24 +49,27 @@ void Window::config()
     conf.close();
 }
 
-void Window::empty_buffer()
-{
+void Window::empty_buffer() {
     for (int i = 0; i < WINDOWHEIGHT; i++)
         for (int j = 0; j < WINDOWLENGTH; j++)
             buffer[i][j] = ' ';
 }
 
-void Window::DEBUG_fill()
-{
-    for (int i = 0; i < WINDOWHEIGHT; i++)
-    {
+void Window::DEBUG_fill() {
+    for (int i = 0; i < WINDOWHEIGHT; i++) {
         for (int j = 0; j < WINDOWLENGTH; j++) cout << '*';
         cout << '\n';
     }
 }
 
-void Window::init()
-{
+void Window::print_buffer() {
+    for (int i = 0; i < WINDOWHEIGHT; i++) {
+        for (int j = 0; j < WINDOWLENGTH; j++) cout << buffer[i][j];
+        cout << '\n';
+    }
+}
+
+Window::Window() {
     ios_base::sync_with_stdio(false);
     empty_buffer();
     unsigned int font_h = round((double) screen_height / FONT_RATIO_HEIGHT);
@@ -76,8 +77,7 @@ void Window::init()
     set_font_settings(font_h, font_w);
 }
 
-void Window::set_font_settings(unsigned int f_height, unsigned int f_width)
-{
+void Window::set_font_settings(unsigned int f_height, unsigned int f_width) {
     //Vezi documentatia windows pentru consola
     if (f_height < 1 || f_width < 1) log(200);
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -91,4 +91,98 @@ void Window::set_font_settings(unsigned int f_height, unsigned int f_width)
     if (!SetCurrentConsoleFontEx(hConsole, TRUE, &cfi)) log(201);
     font_size_height = f_height;
     font_size_width = f_width;
+}
+
+void Window::clean_renderer() {
+    //Muta toate pozitiile libere la dreapta pentru un array compact
+    unsigned int next_valid = 0;
+    for (unsigned int i = 0; i < MAXNROFSPRITES; i++)
+        if (renderer[i] != nullptr) {
+            if (i != next_valid) {
+                renderer[next_valid] = renderer[i];
+                renderer[i] = nullptr;
+            }
+            next_valid++;
+        }
+}
+
+void Window::empty_renderer() {
+    //Seteaza toate pointerele la nullptr
+    for (unsigned int i = 0; i < nr_of_sprites_in_renderer; i++)
+        renderer[i] = nullptr;
+    nr_of_sprites_in_renderer = 0;
+}
+
+void Window::add_sprite_to_renderer(Sprite* s1) {
+    //Adauga un sprite in renderer
+    if (!s1) log(802);
+    unsigned int i = nr_of_sprites_in_renderer;
+    if (i == MAXNROFSPRITES) log(809, s1->label);
+    renderer[i] = s1;
+    nr_of_sprites_in_renderer++;
+}
+
+void Window::add_sprites_to_renderer(Sprite** s1, unsigned int sz) {
+    //Adauga mai multe sprite-uri in renderer
+    if (sz < 1) log(802);
+    if (!s1) log(802);
+    unsigned int i = nr_of_sprites_in_renderer;
+    if (i == MAXNROFSPRITES) log(809);
+    for (unsigned int j = i; j < sz + i; j++) {
+        if (!s1[j]) log(802);
+        if (j >= MAXNROFSPRITES) log(809, s1[j - i]->label);
+        renderer[j] = s1[j - i];
+    }
+    nr_of_sprites_in_renderer += sz;
+}
+
+void Window::delete_sprites_in_renderer(Sprite** s1, unsigned int sz) {
+    //Sterge mai multe sprite-uri in renderer dupa pointer
+    if (sz < 1) log(802);
+    if (!s1) log(802);
+    for (unsigned int i = 0; i < nr_of_sprites_in_renderer; i++) {
+        for (unsigned int j = 0; j < sz; j++) {
+            if (renderer[i] == s1[j]) {
+                renderer[i] = nullptr;
+                nr_of_sprites_in_renderer--;
+                break;
+            }
+        }
+    }
+    clean_renderer();
+}
+
+void Window::delete_sprites_in_renderer(unsigned int lbl) {
+    //Sterge mai multe sprite-uri in renderer dupa label
+    for (unsigned int i = 0; i < nr_of_sprites_in_renderer; i++) {
+        if (renderer[i]->label == lbl) {
+            renderer[i] = nullptr;
+            nr_of_sprites_in_renderer--;
+            break;
+        }
+    }
+    clean_renderer();
+}
+
+void Window::update_buffer_from_renderer() {
+    //Da load la sprite-uri in buffer
+    unsigned int i = 0;
+    sort(renderer, renderer + nr_of_sprites_in_renderer, compare);
+    empty_buffer();
+    while (i < nr_of_sprites_in_renderer && renderer[i] != nullptr) {
+        Sprite* current_sprite = renderer[i];
+        if(current_sprite->visible) {
+            unsigned int fh = current_sprite->frame_height;
+            unsigned int fw = current_sprite->frame_width;
+            for (unsigned int h = 0; h < fh; h++) {
+                if (!(h + current_sprite->y < WINDOWLENGTH)) break;
+                for (unsigned int w = 0; w < fw; w++) {
+                    if (!(w + current_sprite->x < WINDOWLENGTH)) break;
+                    unsigned int cr_frame = current_sprite->current_frame;
+                    buffer[h + current_sprite->y][w + current_sprite->x] = current_sprite->sprite_frames[cr_frame][h][w];
+                }
+            }
+        }
+        i++;
+    }
 }
