@@ -32,7 +32,7 @@ void Sprite::DEBUG_sprite() {
     for (unsigned int f = 0; f < nr_of_frames; f++) {
         for (unsigned int h = 0; h < frame_height; h++) {
             for (unsigned int w = 0; w < frame_width; w++) cout << sprite_frames[f][h][w];
-            if (h < frame_height - 1) cout << '\n';
+            cout << '\n';
         }
         if (f < nr_of_frames - 1) cout << '\n';
     }

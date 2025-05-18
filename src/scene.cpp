@@ -44,18 +44,13 @@ void Scene::init_by_file(const char file_name[]) {
     ifstream in(file_name);
     if(!in.is_open()) log(301);
     if (!(in >> nr_of_sprites)) log(302);
-    if (sprites) {
-        for (unsigned int i = 0; i < nr_of_sprites; i++) delete sprites[i];
-        delete[] sprites;
-        sprites = nullptr;
-    }
     sprites = new Sprite*[nr_of_sprites];
     for (unsigned int i = 0; i < nr_of_sprites; i++) {
         char temp[100];
         if (!(in >> temp)) log(302);
-            sprites[i] = new Sprite;
-            sprites[i]->init_by_file(temp);
-        }
+        sprites[i] = new Sprite;
+        sprites[i]->init_by_file(temp);
+    }
 }
 
 void Scene::set_nr_of_sprites(unsigned int nr) {
