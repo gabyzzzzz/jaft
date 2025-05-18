@@ -1,3 +1,8 @@
+# Pentru a compila proiectul
+
+    make
+
+
 # Comenzi esențiale git
 
 ## Lucru cu branch-uri 
@@ -10,6 +15,19 @@ varianta mai simplă (fără să schimbe branch-ul pe care ești)
     git branch nume-branch
 
 se mai poate și în alt fel, cum ar fi să creezi și să îl și schimbi cu git checkout -b nume-branch, dar pentru simplitate vom folosi git branch nume-branch
+
+### Cum iei branch-uri de pe remote (in afara de main) pe local
+
+intai vezi ce branch-uri remote ai cu comanda
+    
+    git branch -r 
+
+apoi le iei de pe remote pe local cu 
+
+    git fetch
+
+iar apoi poti sa il selectezi cu numele de pe 'git branch -r' folosind comenzile de mai jos
+
 
 ### Selecția/schimbarea (switch) branch-ului curent
 
@@ -65,15 +83,16 @@ schimbi branch-ul pe care ești (dacă ești în branch-ul pe care vrei să-l ș
 ### Cum pui pe cea remote, pe github 
 (PUSH) un branch, nu dai push lui main decât dacă sunt lucruri care sigur merg
 
-cu pull request
-
     git push -u origin nume-branch
+
+(dai pull request copying link-ul pe care ti-l da dupa comanda asta)
+
 
 apoi schimbi pe main cu 
 
     git switch main
 
-și ștergi nume-branch
+și ștergi nume-branch (daca ai dat merge dupa ce ai dat pull request pe github, altfel nu trebuie sa il stergi si poti continua sa lucrezi pe el)
 
     git branch -d nume-branch
 
