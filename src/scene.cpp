@@ -5,7 +5,7 @@
 void Scene::clean() {
     //Muta toate pozitiile libere la dreapta pentru un array compact
     unsigned int next_valid = 0;
-    for (unsigned int i = 0; i < nr_of_sprites; i++)
+    for (unsigned int i = 0; i < MAXNROFSPRITES; i++)
         if (sprites[i] != nullptr) {
             if (i != next_valid) {
                 sprites[next_valid] = sprites[i];
@@ -28,9 +28,10 @@ void Scene::show_scene() {
 }
 
 void Scene::add_sprite(Sprite* sprite) {
+    if (MAXNROFSPRITES <= nr_of_sprites) 
+        log(309, sprite->label);
     sprites[nr_of_sprites] = sprite;
     nr_of_sprites++;
-    log(309, sprite->label);
 }
 
 void Scene::init_by_file(const char file_name[]) {
@@ -92,7 +93,7 @@ Scene::~Scene() {
 
 void Scene::delete_sprites() {
     //Sa fie folosit cand memoria este initializata de clasa Scena. Daca este doar partial initializata de Scena, sa se creeze o functie separata
-    if (sprites) {
+    if (nr_of_sprites) {
         for (unsigned int i = 0; i < nr_of_sprites; i++) {
             delete sprites[i];
         }
