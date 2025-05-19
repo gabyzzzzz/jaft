@@ -28,14 +28,8 @@ void Scene::show_scene() {
 }
 
 void Scene::add_sprite(Sprite* sprite) {
-    unsigned int i = 0;
-    while (i < nr_of_sprites) {
-        if (sprites[i] == nullptr) {
-            sprites[i] = sprite;
-            return;
-        }
-        i++;
-    }
+    sprites[nr_of_sprites] = sprite;
+    nr_of_sprites++;
     log(309, sprite->label);
 }
 
@@ -70,6 +64,7 @@ void Scene::remove_sprite(Sprite* sprite) {
     for (unsigned int i = 0; i < nr_of_sprites; i++)
         if (sprites[i] == sprite) {
             sprites[i] = nullptr;
+            nr_of_sprites--;
             break;
         }
     clean();
@@ -77,8 +72,12 @@ void Scene::remove_sprite(Sprite* sprite) {
 
 void Scene::remove_sprite(unsigned int lbl) {
     //Sterge pointerii sprite-urilor cu label-ul lbl
-    for (unsigned int i = 0; i < nr_of_sprites; i++)
+    unsigned int rmv = 0;
+    for (unsigned int i = 0; i < nr_of_sprites; i++) {
         if (sprites[i]->label == lbl) sprites[i] = nullptr;
+        rmv++;
+    }
+    nr_of_sprites -= rmv;
     clean();
 }
 

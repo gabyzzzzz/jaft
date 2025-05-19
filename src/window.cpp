@@ -140,15 +140,17 @@ void Window::delete_sprites_in_renderer(Sprite** s1, unsigned int sz) {
     //Sterge mai multe sprite-uri in renderer dupa pointer
     if (sz < 1) log(802);
     if (!s1) log(802);
+    unsigned int rmv = 0;
     for (unsigned int i = 0; i < nr_of_sprites_in_renderer; i++) {
         for (unsigned int j = 0; j < sz; j++) {
             if (renderer[i] == s1[j]) {
                 renderer[i] = nullptr;
-                nr_of_sprites_in_renderer--;
+                rmv++;
                 break;
             }
         }
     }
+    nr_of_sprites_in_renderer -= rmv;
     clean_renderer();
 }
 
