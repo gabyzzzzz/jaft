@@ -1,6 +1,10 @@
 #include "../includes/libraries.h"
 #include "../includes/defines.h"
 #include "../includes/classes.h"
+#include "../third_party/json.hpp"
+
+using json = nlohmann::json;
+ofstream lg("log.txt", ios::app);
 
 namespace Config {
     int FPS;
@@ -11,12 +15,6 @@ bool compare(Sprite* s1, Sprite* s2) {
 }
 
 void log(int err_code, int sprite_label) {
-    ofstream lg("log.txt", ios::app);
-    if (!lg.is_open()) {
-        cout << 999;
-        cin.get();
-        exit(err_code);
-    }
     lg << "[CONSOLE] Program exited with error code: " << err_code << '\n';
     lg << "[CONSOLE] Sprite id: " << sprite_label << '\n';
     lg.flush();
@@ -24,28 +22,23 @@ void log(int err_code, int sprite_label) {
 }
 
 void Window::config() {
-    ifstream conf("settings.config");
-    if (!conf.is_open()) log(101, 0);
-
-    int dummy;
-    if (!(conf >> dummy)) {
-        //Daca fisierul config este gol
-        cout << "[CONFIG] The settings file is empty. Using the standard options.\n";
+    //Reading from settings json
+    ifstream conf("settings.json");
+    json settings;
+    if (!(conf.is_open()) || !(conf >> settings)) {
+        if (!(conf.is_open())) lg << "[CONSOLE] Didn't find settings.json. Creating file...\n";
         conf.close();
-        ofstream conf_out("settings.config");
-        if (!conf_out.is_open()) log(104);
-
-        //De continuat daca adaugam eventual mai multe setari pentru engine-ul propriu-zis
-        conf_out << 1 << ' ' << 60;
-        conf_out.close();
+        ofstream o("settings.json");
+        lg << "[CONSOLE] Failed extracting settings.json. Using default settings...\n";
+        json out;
+        out["FPS"] = 60;
+        Config::FPS = 60;
+        o << out;
+        o.close();
         return;
     }
-
-    if (conf >> Config::FPS) {
-        //Daca fisierul nu este gol
-        if (Config::FPS < 1 || Config::FPS > 144) log(103);
-    }
-    else log(103, 0);
+    if (!settings.contains("FPS") && settings["FPS"].is_number()) log(102);
+    else Config::FPS = settings["FPS"];
     conf.close();
 }
 
@@ -70,6 +63,13 @@ void Window::print_buffer() {
 }
 
 Window::Window() {
+    //Constructor for window
+    if (!(lg.is_open())) {
+        cout << 999;
+        cin.get();
+        exit(999);
+    }
+    config();
     ios_base::sync_with_stdio(false);
     empty_buffer();
     unsigned int font_h = round((double) screen_height / FONT_RATIO_HEIGHT);
