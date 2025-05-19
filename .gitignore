@@ -1,3 +1,6 @@
 *.exe
 log.txt
 *.json
+main.cpp
+test_sprites/
+.vscode/

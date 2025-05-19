@@ -3,11 +3,11 @@
 #include "../includes/defines.h"
 
 void Sprite::init_by_file(const char file_name[]) {
+    //Initializeaza sprite-ul din fisier
     ifstream in(file_name);
     if (!in.is_open()) log(401, label);
     if (!(in >> frame_height >> frame_width >> nr_of_frames)) log(402, label);
     if (frame_height < 1 || frame_width < 1 || nr_of_frames < 1) log(403, label);
-
     string input;
     //Scapam de primul new line
     getline(in, input);
@@ -25,6 +25,14 @@ void Sprite::init_by_file(const char file_name[]) {
         }
     }
 }
+
+Sprite::Sprite(const char* file_name, unsigned int lbl) : label(lbl) {
+    init_by_file(file_name);
+}
+
+Sprite::Sprite(unsigned int lbl) : label(lbl) {}
+
+Sprite::Sprite() = default;
 
 void Sprite::DEBUG_sprite() {
     //Printeaza fisierul citit

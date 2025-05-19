@@ -18,6 +18,9 @@ public:
 
     void init_by_file(const char file_name[]);
     void DEBUG_sprite();
+    Sprite(unsigned int lbl);
+    Sprite();
+    Sprite(const char file_name[], unsigned int lbl);
     ~Sprite();
 };
 
