@@ -26,7 +26,7 @@ void Sprite::init_by_file(const char file_name[]) {
     }
 }
 
-Sprite::Sprite(const char* file_name, unsigned int lbl) : label(lbl) {
+Sprite::Sprite(const char file_name[], unsigned int lbl) : label(lbl) {
     init_by_file(file_name);
 }
 
