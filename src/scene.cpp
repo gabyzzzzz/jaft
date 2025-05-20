@@ -3,16 +3,18 @@
 #include "../includes/classes.h"
 
 void Scene::clean() {
-    //Muta toate pozitiile libere la dreapta pentru un array compact
+    unsigned int rmv = 0;
     unsigned int next_valid = 0;
-    for (unsigned int i = 0; i < MAXNROFSPRITES; i++)
+    for (unsigned int i = 0; i < nr_of_sprites; i++) {
         if (sprites[i] != nullptr) {
             if (i != next_valid) {
                 sprites[next_valid] = sprites[i];
                 sprites[i] = nullptr;
             }
             next_valid++;
-        }
+        } else rmv++;
+    }
+    nr_of_sprites -= rmv;
 }
 
 void Scene::hide_scene() {
@@ -65,7 +67,6 @@ void Scene::remove_sprite(Sprite* sprite) {
     for (unsigned int i = 0; i < nr_of_sprites; i++)
         if (sprites[i] == sprite) {
             sprites[i] = nullptr;
-            nr_of_sprites--;
             break;
         }
     clean();
@@ -74,11 +75,9 @@ void Scene::remove_sprite(Sprite* sprite) {
 void Scene::remove_sprite(unsigned int lbl) {
     //Sterge pointerii sprite-urilor cu label-ul lbl
     unsigned int rmv = 0;
-    for (unsigned int i = 0; i < nr_of_sprites; i++) {
-        if (sprites[i]->label == lbl) sprites[i] = nullptr;
-        rmv++;
-    }
-    nr_of_sprites -= rmv;
+    for (unsigned int i = 0; i < nr_of_sprites; i++) 
+        if (sprites[i]->label == lbl) 
+            sprites[i] = nullptr;
     clean();
 }
 
@@ -91,7 +90,7 @@ Scene::~Scene() {
     }
 }
 
-void Scene::delete_sprites() {
+void Scene::remove_all_sprites() {
     //Sa fie folosit cand memoria este initializata de clasa Scena. Daca este doar partial initializata de Scena, sa se creeze o functie separata
     if (nr_of_sprites) {
         for (unsigned int i = 0; i < nr_of_sprites; i++) {

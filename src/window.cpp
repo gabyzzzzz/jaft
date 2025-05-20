@@ -95,6 +95,7 @@ void Window::set_font_settings(unsigned int f_height, unsigned int f_width) {
 
 void Window::clean_renderer() {
     //Muta toate pozitiile libere la dreapta pentru un array compact
+    unsigned int rmv = 0;
     unsigned int next_valid = 0;
     for (unsigned int i = 0; i < MAXNROFSPRITES; i++)
         if (renderer[i] != nullptr) {
@@ -103,7 +104,8 @@ void Window::clean_renderer() {
                 renderer[i] = nullptr;
             }
             next_valid++;
-        }
+        } else rmv++;
+    nr_of_sprites_in_renderer -= rmv;
 }
 
 void Window::empty_renderer() {
@@ -136,30 +138,26 @@ void Window::add_sprites_to_renderer(Sprite** s1, unsigned int sz) {
     nr_of_sprites_in_renderer += sz;
 }
 
-void Window::delete_sprites_in_renderer(Sprite** s1, unsigned int sz) {
+void Window::remove_sprites_from_renderer(Sprite** s1, unsigned int sz) {
     //Sterge mai multe sprite-uri in renderer dupa pointer
     if (sz < 1) log(802);
     if (!s1) log(802);
-    unsigned int rmv = 0;
     for (unsigned int i = 0; i < nr_of_sprites_in_renderer; i++) {
         for (unsigned int j = 0; j < sz; j++) {
             if (renderer[i] == s1[j]) {
                 renderer[i] = nullptr;
-                rmv++;
                 break;
             }
         }
     }
-    nr_of_sprites_in_renderer -= rmv;
     clean_renderer();
 }
 
-void Window::delete_sprites_in_renderer(unsigned int lbl) {
+void Window::remove_sprites_from_renderer(unsigned int lbl) {
     //Sterge mai multe sprite-uri in renderer dupa label
     for (unsigned int i = 0; i < nr_of_sprites_in_renderer; i++) {
         if (renderer[i]->label == lbl) {
             renderer[i] = nullptr;
-            nr_of_sprites_in_renderer--;
             break;
         }
     }

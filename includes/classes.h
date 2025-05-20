@@ -30,7 +30,7 @@ public:
     unsigned int nr_of_sprites;
     Sprite** sprites;
 
-    void delete_sprites();
+    void remove_all_sprites();
     Scene& operator=(const Scene& obj1);
     void DEBUG_scene();
     void clean();
@@ -59,8 +59,8 @@ public:
     void update_buffer_from_renderer();
     void add_sprite_to_renderer(Sprite* s1);
     void add_sprites_to_renderer(Sprite** s1, unsigned int sz);
-    void delete_sprites_in_renderer(Sprite** s1, unsigned int sz);
-    void delete_sprites_in_renderer(unsigned int lbl);
+    void remove_sprites_from_renderer(Sprite** s1, unsigned int sz);
+    void remove_sprites_from_renderer(unsigned int lbl);
     void empty_renderer();
     void print_buffer();
     void empty_buffer();
