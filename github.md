@@ -28,6 +28,11 @@ apoi le iei de pe remote pe local cu
 
 iar apoi poti sa il selectezi cu numele de pe 'git branch -r' folosind comenzile de mai jos
 
+### Dacă tu ai șters un branch de pe remote, de pe github dar tot apare cu 'git branch -r'
+
+rulează comanda următoare ca să-ți șteargă referințele la branch-uri de pe remote care nu mai există
+
+    git fetch --prune --all
 
 ### Selecția/schimbarea (switch) branch-ului curent
 
