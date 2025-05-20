@@ -129,7 +129,7 @@ void Window::add_sprites_to_renderer(Sprite** s1, unsigned int sz) {
     if (sz < 1) log(802);
     if (!s1) log(802);
     if (MAXNROFSPRITES <= nr_of_sprites_in_renderer + sz) 
-        log(309, s1[0]->label);
+        log(809, s1[0]->label);
     for (unsigned int i = nr_of_sprites_in_renderer; i < sz + nr_of_sprites_in_renderer; i++) {
         if (!s1[i]) log(802);
         renderer[i] = s1[i - nr_of_sprites_in_renderer];
