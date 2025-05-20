@@ -41,6 +41,8 @@ public:
     void remove_sprite(unsigned int lbl);
     void set_nr_of_sprites(unsigned int nr);
     void init_by_file(const char file_name[]);
+    Scene(const char file_name[]);
+    Scene();
     ~Scene();
 };
 

@@ -122,3 +122,9 @@ void Scene::DEBUG_scene() {
         }
     }
 }
+
+Scene::Scene(const char file_name[]) {
+    init_by_file(file_name);
+}
+
+Scene::Scene() = default;
