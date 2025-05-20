@@ -16,28 +16,39 @@ public:
     unsigned int label = 0;
     char*** sprite_frames = nullptr;
 
-    void init_by_file(const char file_name[]);
     void DEBUG_sprite();
+
+    void init_by_file(const char file_name[]);
+    Sprite(unsigned int lbl);
+    Sprite();
+    Sprite(const char file_name[], unsigned int lbl);
     ~Sprite();
 };
 
 
 class Scene{
 public:
-    unsigned int nr_of_sprites;
+    unsigned int nr_of_sprites = 0;
     Sprite** sprites;
 
-    void delete_sprites();
-    Scene& operator=(const Scene& obj1);
     void DEBUG_scene();
     void clean();
     void hide_scene();
     void show_scene();
+
+    void remove_all_sprites();
     void add_sprite(Sprite* sprite);
+    void add_sprites(Sprite** sprites, unsigned int sz);
     void remove_sprite(Sprite* sprite);
-    void remove_sprite(unsigned int lbl);
+    void remove_sprites(function<bool(Sprite*)> condition);
+    void remove_sprites(Sprite** sprites, unsigned int sz);
+
     void set_nr_of_sprites(unsigned int nr);
     void init_by_file(const char file_name[]);
+
+    Scene& operator=(const Scene& obj1);
+    Scene(const char file_name[]);
+    Scene();
     ~Scene();
 };
 
@@ -46,12 +57,27 @@ class Window
 {
 public:
     unsigned int screen_height = GetSystemMetrics(SM_CYFULLSCREEN), screen_width = GetSystemMetrics(SM_CXFULLSCREEN);
+    unsigned int nr_of_sprites_in_renderer = 0;
     double font_size_height, font_size_width;
     char buffer[WINDOWHEIGHT][WINDOWLENGTH];
+    Sprite* renderer[MAXNROFSPRITES];
+
+    void empty_renderer();
+    void clean_renderer();
+    void update_buffer_from_renderer();
+    void add_sprite_to_renderer(Sprite* sprite);
+    void add_sprites_to_renderer(Sprite** sprites, unsigned int sz);
+    void remove_sprite_from_renderer(Sprite* sprite);
+    void remove_sprites_from_renderer(Sprite** sprites, unsigned int sz);
+    void remove_sprites_from_renderer(function<bool(Sprite*)> condition);
+
     void print_buffer();
     void empty_buffer();
+
     void DEBUG_fill();
-    void init();
+
     void set_font_settings(unsigned int f_height, unsigned int f_width);
     void config();
+
+    Window();
 };

@@ -6,5 +6,7 @@
 #include <fstream>
 #include <string>
 #include <math.h>
+#include <algorithm>
+#include <functional>
 
 using namespace std;

@@ -1,2 +1,5 @@
 *.exe
 log.txt
+*.json
+test_sprites/
+.vscode/
