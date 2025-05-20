@@ -30,10 +30,38 @@ void Scene::show_scene() {
 }
 
 void Scene::add_sprite(Sprite* sprite) {
-    if (MAXNROFSPRITES <= nr_of_sprites) 
+    if (MAXNROFSPRITES <= nr_of_sprites + 1) 
         log(309, sprite->label);
     sprites[nr_of_sprites] = sprite;
     nr_of_sprites++;
+}
+
+void Scene::add_sprites(Sprite** s1, unsigned int sz) {
+    //Adauga mai multe sprite-uri in scena
+    if (sz < 1) log(802);
+    if (!s1) log(802);
+    if (MAXNROFSPRITES <= nr_of_sprites + sz) 
+        log(309, s1[0]->label);
+    for (int i = nr_of_sprites; i < nr_of_sprites + sz; i++) {
+        if (!s1[i]) log(802);
+        sprites[i] = s1[i - nr_of_sprites]; 
+    }
+    nr_of_sprites += sz;
+}
+
+void Scene::remove_sprites(Sprite** s1, unsigned int sz) {
+    //Sterge mai multe sprite-uri dupa pointer
+    if (sz < 1) log(802);
+    if (!s1) log(802);
+    for (unsigned int i = 0; i < nr_of_sprites; i++) {
+        for (unsigned int j = 0; j < sz; j++) {
+            if (sprites[i] == s1[j]) {
+                sprites[i] = nullptr;
+                break;
+            }
+        }
+    }
+    clean();
 }
 
 void Scene::init_by_file(const char file_name[]) {
@@ -72,11 +100,11 @@ void Scene::remove_sprite(Sprite* sprite) {
     clean();
 }
 
-void Scene::remove_sprite(unsigned int lbl) {
-    //Sterge pointerii sprite-urilor cu label-ul lbl
+void Scene::remove_sprites(function<bool(Sprite*)> condition) {
+    //Sterge pointerii sprite-urilor care respecta conditia
     unsigned int rmv = 0;
     for (unsigned int i = 0; i < nr_of_sprites; i++) 
-        if (sprites[i]->label == lbl) 
+        if (condition(sprites[i])) 
             sprites[i] = nullptr;
     clean();
 }

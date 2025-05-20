@@ -97,7 +97,7 @@ void Window::clean_renderer() {
     //Muta toate pozitiile libere la dreapta pentru un array compact
     unsigned int rmv = 0;
     unsigned int next_valid = 0;
-    for (unsigned int i = 0; i < MAXNROFSPRITES; i++)
+    for (unsigned int i = 0; i < nr_of_sprites_in_renderer; i++)
         if (renderer[i] != nullptr) {
             if (i != next_valid) {
                 renderer[next_valid] = renderer[i];
@@ -128,12 +128,11 @@ void Window::add_sprites_to_renderer(Sprite** s1, unsigned int sz) {
     //Adauga mai multe sprite-uri in renderer
     if (sz < 1) log(802);
     if (!s1) log(802);
-    unsigned int i = nr_of_sprites_in_renderer;
-    if (i == MAXNROFSPRITES) log(809);
-    for (unsigned int j = i; j < sz + i; j++) {
-        if (!s1[j]) log(802);
-        if (j >= MAXNROFSPRITES) log(809, s1[j - i]->label);
-        renderer[j] = s1[j - i];
+    if (MAXNROFSPRITES <= nr_of_sprites_in_renderer + sz) 
+        log(309, s1[0]->label);
+    for (unsigned int i = nr_of_sprites_in_renderer; i < sz + nr_of_sprites_in_renderer; i++) {
+        if (!s1[i]) log(802);
+        renderer[i] = s1[i - nr_of_sprites_in_renderer];
     }
     nr_of_sprites_in_renderer += sz;
 }
@@ -153,10 +152,10 @@ void Window::remove_sprites_from_renderer(Sprite** s1, unsigned int sz) {
     clean_renderer();
 }
 
-void Window::remove_sprites_from_renderer(unsigned int lbl) {
-    //Sterge mai multe sprite-uri in renderer dupa label
+void Window::remove_sprites_from_renderer(function<bool(Sprite*)> condition) {
+    //Sterge mai multe sprite-uri in renderer dupa functia data
     for (unsigned int i = 0; i < nr_of_sprites_in_renderer; i++) {
-        if (renderer[i]->label == lbl) {
+        if (condition(renderer[i])) {
             renderer[i] = nullptr;
             break;
         }
@@ -185,4 +184,14 @@ void Window::update_buffer_from_renderer() {
         }
         i++;
     }
+}
+
+void Window::remove_sprite_from_renderer(Sprite* sprite) {
+    //Sterge pointer-ul dat din renderer
+    for (unsigned int i = 0; i < nr_of_sprites_in_renderer; i++)
+        if (renderer[i] == sprite) {
+            renderer[i] = nullptr;
+            break;
+        }
+    clean_renderer();
 }
