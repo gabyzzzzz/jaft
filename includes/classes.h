@@ -28,7 +28,7 @@ public:
 
 class Scene{
 public:
-    unsigned int nr_of_sprites;
+    unsigned int nr_of_sprites = 0;
     Sprite** sprites;
 
     void DEBUG_scene();
