@@ -6,6 +6,28 @@
 using json = nlohmann::json;
 ofstream lg("log.txt", ios::app);
 
+namespace Game {
+    bool running = true;
+    queue<char> key_pressed;
+    mutex key_mutex;
+
+    void push_key(char k) {
+        lock_guard<mutex> lock(key_mutex);
+        if (key_pressed.size() > 7) {
+            key_pressed.pop();  
+        }
+        key_pressed.push(k);
+    }
+
+    bool pop_key(char &k) {
+        lock_guard<mutex> lock(key_mutex);
+        if (key_pressed.empty()) return false;
+        k = key_pressed.front();
+        key_pressed.pop();
+        return true;
+    }
+}
+
 namespace Config {
     int FPS;
 };
@@ -25,6 +47,7 @@ void Window::config() {
     //Reading from settings json
     ifstream conf("settings.json");
     json settings;
+    screen_height = GetSystemMetrics(SM_CYFULLSCREEN); screen_width = GetSystemMetrics(SM_CXFULLSCREEN);
     if (!(conf.is_open()) || !(conf >> settings)) {
         if (!(conf.is_open())) lg << "[CONSOLE] Didn't find settings.json. Creating file...\n";
         conf.close();
@@ -51,15 +74,19 @@ void Window::empty_buffer() {
 void Window::DEBUG_fill() {
     for (int i = 0; i < WINDOWHEIGHT; i++) {
         for (int j = 0; j < WINDOWLENGTH; j++) cout << '*';
-        cout << '\n';
+        if (i < WINDOWHEIGHT - 1) cout << '\n';
     }
+    cout.flush();
 }
 
 void Window::print_buffer() {
     for (int i = 0; i < WINDOWHEIGHT; i++) {
-        for (int j = 0; j < WINDOWLENGTH; j++) cout << buffer[i][j];
-        cout << '\n';
+        string to_print;
+        for (int j = 0; j < WINDOWLENGTH; j++) to_print += buffer[i][j];
+        cout << to_print;
+        if (i < WINDOWHEIGHT - 1) cout << '\n';
     }
+    cout.flush();
 }
 
 Window::Window() {
@@ -69,12 +96,16 @@ Window::Window() {
         cin.get();
         exit(999);
     }
-    config();
     ios_base::sync_with_stdio(false);
-    empty_buffer();
+    config();
     unsigned int font_h = round((double) screen_height / FONT_RATIO_HEIGHT);
     unsigned int font_w = round((double) screen_width / FONT_RATIO_LENGTH);
     set_font_settings(font_h, font_w);
+    hide_console_cursor();
+    maximize_console();
+    disable_console_resize();
+    disable_console_scroll();
+    empty_buffer();
 }
 
 void Window::set_font_settings(unsigned int f_height, unsigned int f_width) {
@@ -194,4 +225,109 @@ void Window::remove_sprite_from_renderer(Sprite* sprite) {
             break;
         }
     clean_renderer();
+}
+
+void Window::reset_cursor() {
+    //Config
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD topLeft = { 0, 0 };
+    SetConsoleCursorPosition(hConsole, topLeft);
+}
+
+void Window::disable_console_scroll() {
+    //Config
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    COORD newSize = {
+        static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
+        static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)
+    };
+    SetConsoleScreenBufferSize(hConsole, newSize);
+}
+
+void Window::disable_console_resize() {
+    //Config
+    HWND console = GetConsoleWindow();
+    if (!console) return;
+    LONG style = GetWindowLong(console, GWL_STYLE);
+    style &= ~(WS_SIZEBOX | WS_MAXIMIZEBOX);
+    SetWindowLong(console, GWL_STYLE, style);
+    SetWindowPos(console, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+}
+
+void Window::hide_console_cursor() {
+    //Config
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO cursorInfo;
+
+    GetConsoleCursorInfo(hConsole, &cursorInfo);
+    cursorInfo.bVisible = FALSE; 
+    SetConsoleCursorInfo(hConsole, &cursorInfo);
+}
+
+
+void Window::maximize_console() {
+    //Config
+    HWND hwnd = GetConsoleWindow();
+    SetForegroundWindow(hwnd); 
+    keybd_event(VK_F11, 0, 0, 0);
+    keybd_event(VK_F11, 0, KEYEVENTF_KEYUP, 0);
+    fix_console_size();
+    Sleep(100);
+}
+
+void Window::input() {
+    //Codul pentru input-handeling. Foloseste game_loop pentru multithreading (recomandat)
+     while (Game::running) {
+        if (_kbhit()) {
+            char ch = _getch(); 
+            if (ch == 27) { Game::running = false; return; }
+            Game::push_key(ch);
+        }
+        this_thread::sleep_for(chrono::milliseconds(10));
+    }
+}
+
+void Window::gml(function<void()> game_logic) {
+    //Codul game loop-ului. Foloseste game_loop pentru multithreading (recomandat)
+    using clock = chrono::high_resolution_clock;
+    using duration = chrono::duration<double, milli>;
+    double frame_time = 1000.0 / Config::FPS; 
+    while (Game::running) {
+        auto frame_start = clock::now();
+        game_logic();
+        update_buffer_from_renderer();
+        print_buffer();
+        reset_cursor();
+        auto frame_end = clock::now();
+        duration elapsed = frame_end - frame_start;
+        if (elapsed.count() < frame_time) 
+            this_thread::sleep_for(chrono::milliseconds((int)(frame_time - elapsed.count())));
+    }
+}
+
+void Window::game_loop(function<void()> game_logic) {
+    //Game loop-ul propriu-zis. Primeste ca parametru o functie de tip void care se va executa la fiecare game tick
+    thread game_thread(gml, this, game_logic);
+    thread input_thread(input, this);
+    input_thread.join();
+    game_thread.join();
+}
+
+bool Window::get_key_pressed(char& ch) {
+    char key;
+    if (!(Game::pop_key(key))) return false;
+    ch = key;
+    return true;
+}
+
+void Window::fix_console_size() {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD newSize;
+    newSize.X = 200;
+    newSize.Y = 100; 
+    SetConsoleScreenBufferSize(hConsole, newSize);
+    SMALL_RECT winSize = { 0, 0, static_cast<SHORT>(newSize.X - 1), static_cast<SHORT>(newSize.Y - 1) };
+    SetConsoleWindowInfo(hConsole, TRUE, &winSize);
 }

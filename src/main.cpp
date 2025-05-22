@@ -4,15 +4,22 @@
 
 using namespace std;
 
+Sprite test("../test_sprites/sprite.spr", 1);
+Window window;
+
+void test_function() {
+    char c_key;
+    if (window.get_key_pressed(c_key)) {
+        if (c_key == 'w') test.y--;
+        else if (c_key == 'a') test.x--;
+        else if (c_key == 'd') test.x++;
+        else if (c_key == 's') test.y++;
+    }
+}
+
 int main()
-{
-    Sprite test("../test_sprites/sprite.spr", 1);
-    //Great, working with constructors now! Great quality of life update. ( Also, kind of clean :)))) )
-    Window window;
+{ 
     window.add_sprite_to_renderer(&test);
-    window.update_buffer_from_renderer();
-    window.print_buffer();
-    
-    cin.get();
+    window.game_loop(test_function);
     return 0;
 }

@@ -56,7 +56,7 @@ public:
 class Window
 {
 public:
-    unsigned int screen_height = GetSystemMetrics(SM_CYFULLSCREEN), screen_width = GetSystemMetrics(SM_CXFULLSCREEN);
+    unsigned int screen_height, screen_width;
     unsigned int nr_of_sprites_in_renderer = 0;
     double font_size_height, font_size_width;
     char buffer[WINDOWHEIGHT][WINDOWLENGTH];
@@ -76,7 +76,17 @@ public:
 
     void DEBUG_fill();
 
+    void fix_console_size();
+    bool get_key_pressed(char& ch);
+    void gml(function<void()> game_logic);
+    void game_loop(function<void()> game_logic);
+    void input();
+    void maximize_console();
+    void hide_console_cursor();
+    void disable_console_resize();
+    void disable_console_scroll();
     void set_font_settings(unsigned int f_height, unsigned int f_width);
+    void reset_cursor();
     void config();
 
     Window();
