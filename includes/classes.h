@@ -18,6 +18,9 @@ public:
 
     void DEBUG_sprite();
 
+    bool is_colliding(Sprite* sprite);
+    bool is_colliding(Sprite* sprite, const char characters[], unsigned int sz);
+
     void init_by_file(const char file_name[]);
     Sprite(unsigned int lbl);
     Sprite();
@@ -75,7 +78,7 @@ public:
     void empty_buffer();
 
     void DEBUG_fill();
-
+    
     void fix_console_size();
     bool get_key_pressed(char& ch);
     void gml(function<void()> game_logic);

@@ -26,14 +26,6 @@ void Sprite::init_by_file(const char file_name[]) {
     }
 }
 
-Sprite::Sprite(const char file_name[], unsigned int lbl) : label(lbl) {
-    init_by_file(file_name);
-}
-
-Sprite::Sprite(unsigned int lbl) : label(lbl) {}
-
-Sprite::Sprite() = default;
-
 void Sprite::DEBUG_sprite() {
     //Printeaza fisierul citit
     cout << frame_height << ' ' << frame_width << ' ' << nr_of_frames << "\n\n";
@@ -53,4 +45,44 @@ Sprite::~Sprite() {
         delete[] sprite_frames[f];
     }
     delete[] sprite_frames;
+}
+
+Sprite::Sprite() = default;
+
+Sprite::Sprite(const char file_name[], unsigned int lbl) : label(lbl) {
+    init_by_file(file_name);
+}
+
+Sprite::Sprite(unsigned int lbl) : label(lbl) {}
+
+bool Sprite::is_colliding(Sprite* sprite) {
+    if (x + frame_width - 1 < sprite->x) return false;
+    if (sprite->x + sprite->frame_width - 1 < x) return false;
+    if (y + frame_height - 1 < sprite->y) return false;
+    if (sprite->y + sprite->frame_height - 1 < y) return false;
+    return true;
+}
+
+bool Sprite::is_colliding(Sprite* sprite, const char characters[], unsigned int sz) {
+    if (!is_colliding(sprite)) return false;
+    if (sz < 1) log(702, label);
+    if (!characters) log(702, label);
+    unsigned int x_start = max(x, sprite->x);
+    unsigned int x_end = min(x + frame_width, sprite->x + sprite->frame_width);
+    unsigned int y_start = max(y, sprite->y);
+    unsigned int y_end = min(y + frame_height, sprite->y + sprite->frame_height);
+    for (unsigned int i = y_start; i < y_end; i++) {
+        for (unsigned int j = x_start; j < x_end; j++) {
+            char current_pixel = sprite->sprite_frames[sprite->current_frame][i - sprite->y][j - sprite->x];
+            bool found = false;
+            for (unsigned int k = 0; k < sz; k++) {
+                if (current_pixel == characters[k]) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) return true;
+        }
+    }
+    return false; 
 }
