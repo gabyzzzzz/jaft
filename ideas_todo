@@ -1,5 +1,3 @@
 -For more control, creating a custom GUI window would be a nice upgrade
--Detecting sprite colosion
--Getting input without cin
--Clearing the console for new frames
--Finishing writing the code for the renderer + buffer in Window
+-Adding colours and sounds
+-Using a square font with centered characters

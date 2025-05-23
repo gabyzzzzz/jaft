@@ -32,7 +32,7 @@ int main() {
     window.add_sprites_to_renderer(sprites, 2);
     test2.x += 20;
     test2.y += 20;
-    test.stage = 2;
+    test.stage = 1;
     test2.stage = 1;
     window.game_loop(test_function);
     return 0;

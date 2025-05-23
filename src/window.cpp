@@ -80,14 +80,16 @@ void Window::DEBUG_fill() {
 }
 
 void Window::print_buffer() {
+    string full_output;
     for (int i = 0; i < WINDOWHEIGHT; i++) {
-        string to_print;
-        for (int j = 0; j < WINDOWLENGTH; j++) to_print += buffer[i][j];
-        cout << to_print;
-        if (i < WINDOWHEIGHT - 1) cout << '\n';
+        for (int j = 0; j < WINDOWLENGTH; j++) {
+            full_output += buffer[i][j];
+        }
+        if (i < WINDOWHEIGHT - 1) full_output += '\n';
     }
+    cout << full_output;
     cout.flush();
-}
+}  
 
 Window::Window() {
     //Constructor for window
@@ -205,10 +207,13 @@ void Window::update_buffer_from_renderer() {
             unsigned int fh = current_sprite->frame_height;
             unsigned int fw = current_sprite->frame_width;
             for (unsigned int h = 0; h < fh; h++) {
-                if (!(h + current_sprite->y < WINDOWLENGTH)) break;
+                if (!(h + current_sprite->y < WINDOWHEIGHT)) continue;
+                if (h + current_sprite->y < 0) continue;
                 for (unsigned int w = 0; w < fw; w++) {
-                    if (!(w + current_sprite->x < WINDOWLENGTH)) break;
+                    if (!(w + current_sprite->x < WINDOWLENGTH)) continue;
+                    if (w + current_sprite->x < 0) continue;
                     unsigned int cr_frame = current_sprite->current_frame;
+                    if (!current_sprite->transparent_white_spaces || current_sprite->sprite_frames[cr_frame][h][w] != ' ') 
                     buffer[h + current_sprite->y][w + current_sprite->x] = current_sprite->sprite_frames[cr_frame][h][w];
                 }
             }

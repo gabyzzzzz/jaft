@@ -8,7 +8,7 @@ void log(int err_code, int sprite_label = 0);
 class Sprite
 {
 public:
-    bool visible = true, is_animation_active = true;
+    bool visible = true, is_animation_active = true, transparent_white_spaces = true;
     unsigned int x = 0, y = 0;
     unsigned int frame_height = 0, frame_width = 0;
     unsigned int stage = 0;
