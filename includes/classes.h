@@ -79,6 +79,8 @@ public:
 
     void DEBUG_fill();
     
+    void disable_text_selection();
+    void fix_zoom();
     void fix_console_size();
     bool get_key_pressed(char& ch);
     void gml(function<void()> game_logic);

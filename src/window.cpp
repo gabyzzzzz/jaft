@@ -107,6 +107,8 @@ Window::Window() {
     maximize_console();
     disable_console_resize();
     disable_console_scroll();
+    disable_text_selection();
+    fix_zoom();
     empty_buffer();
 }
 
@@ -328,6 +330,7 @@ bool Window::get_key_pressed(char& ch) {
 }
 
 void Window::fix_console_size() {
+    //Config
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     COORD newSize;
     newSize.X = 200;
@@ -335,4 +338,24 @@ void Window::fix_console_size() {
     SetConsoleScreenBufferSize(hConsole, newSize);
     SMALL_RECT winSize = { 0, 0, static_cast<SHORT>(newSize.X - 1), static_cast<SHORT>(newSize.Y - 1) };
     SetConsoleWindowInfo(hConsole, TRUE, &winSize);
+}
+
+void Window::fix_zoom() {
+    //Config
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode;
+    GetConsoleMode(hInput, &mode);
+    mode &= ~ENABLE_MOUSE_INPUT;
+    mode &= ~ENABLE_QUICK_EDIT_MODE;
+    SetConsoleMode(hInput, mode);
+}
+
+void Window::disable_text_selection() {
+    //Config
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode = 0;
+    GetConsoleMode(hInput, &mode);
+    mode &= ~ENABLE_QUICK_EDIT_MODE;
+    mode |= ENABLE_EXTENDED_FLAGS | ENABLE_PROCESSED_INPUT;
+    SetConsoleMode(hInput, mode);
 }
