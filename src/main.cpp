@@ -4,36 +4,36 @@
 
 using namespace std;
 
-Sprite test("../test_sprites/sprite.spr", 1);
-Sprite test2("../test_sprites/sprite2.spr", 2);
+Sprite player("../test_sprites/sprite.spr", 0);
+Sprite maze("../test_sprites/sprite2.spr", 1);
 Window window;
+
+const unsigned int game_sprites_size = 2;
 
 const char passed_char[1] = {' '};
 
-void test_function() {
-    char c_key;
-    if (window.get_key_pressed(c_key)) {
-        pair<unsigned int, unsigned int> coords;
-        coords.first = test.x;
-        coords.second = test.y;
-        if (c_key == 'w') test.y--;
-        else if (c_key == 'a') test.x--;
-        else if (c_key == 'd') test.x++;
-        else if (c_key == 's') test.y++;
-        if (test.is_colliding(&test2, passed_char, 1)) {
-            test.x = coords.first;
-            test.y = coords.second;
-        }
+void game_l() {
+    char current_char;
+    window.get_key_pressed(current_char);
+    unsigned int prv_x, prv_y;
+    prv_x = player.x; prv_y = player.y;
+    if (current_char == 'w') player.y--;
+    if (current_char == 'a') player.x--;
+    if (current_char == 's') player.y++;
+    if (current_char == 'd') player.x++;
+    if (player.is_colliding(&maze, passed_char, 1)) { 
+        exit(0);
+        player.x = prv_x; 
+        player.y = prv_y; 
     }
+    if (player.y < 10 && player.y > 0 && player.x == 233) exit(0);
 }
 
 int main() { 
-    Sprite* sprites[] = {&test, &test2};
-    window.add_sprites_to_renderer(sprites, 2);
-    test2.x += 20;
-    test2.y += 20;
-    test.stage = 1;
-    test2.stage = 1;
-    window.game_loop(test_function);
+    //y - 1, x - 2
+    Sprite* game_sprites[game_sprites_size] = {&player, &maze};
+    player.x = 2; player.y = 1;
+    window.add_sprites_to_renderer(game_sprites, game_sprites_size);
+    window.game_loop(game_l);
     return 0;
 }

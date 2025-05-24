@@ -285,7 +285,7 @@ void Window::maximize_console() {
 }
 
 void Window::input() {
-    //Codul pentru input-handeling. Foloseste game_loop pentru multithreading (recomandat)
+    //Codul pentru input-handling. Foloseste game_loop pentru multithreading (recomandat)
      while (Game::running) {
         if (_kbhit()) {
             char ch = _getch(); 
