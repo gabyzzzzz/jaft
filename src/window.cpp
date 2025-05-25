@@ -8,24 +8,8 @@ ofstream lg("log.txt", ios::app);
 
 namespace Game {
     bool running = true;
-    queue<char> key_pressed;
+    unordered_set<char> keys_down;
     mutex key_mutex;
-
-    void push_key(char k) {
-        lock_guard<mutex> lock(key_mutex);
-        if (key_pressed.size() > 7) {
-            key_pressed.pop();  
-        }
-        key_pressed.push(k);
-    }
-
-    bool pop_key(char &k) {
-        lock_guard<mutex> lock(key_mutex);
-        if (key_pressed.empty()) return false;
-        k = key_pressed.front();
-        key_pressed.pop();
-        return true;
-    }
 }
 
 namespace Config {
@@ -66,9 +50,14 @@ void Window::config() {
 }
 
 void Window::empty_buffer() {
-    for (int i = 0; i < WINDOWHEIGHT; i++)
-        for (int j = 0; j < WINDOWLENGTH; j++)
-            buffer[i][j] = ' ';
+    //Not only it empties the buffer, it also puts the newlines and the null character.
+    for (int i = 0; i < WINDOWHEIGHT; i++) {
+        for (int j = 0; j < WINDOWLENGTH; j++) {
+            buffer[i * (WINDOWLENGTH + 1) + j] = ' ';
+        }
+        buffer[i * (WINDOWLENGTH + 1) + WINDOWLENGTH] = '\n';
+    }
+    buffer[WINDOWHEIGHT * (WINDOWLENGTH + 1) - 1] = '\0';
 }
 
 void Window::DEBUG_fill() {
@@ -80,15 +69,9 @@ void Window::DEBUG_fill() {
 }
 
 void Window::print_buffer() {
-    string full_output;
-    for (int i = 0; i < WINDOWHEIGHT; i++) {
-        for (int j = 0; j < WINDOWLENGTH; j++) {
-            full_output += buffer[i][j];
-        }
-        if (i < WINDOWHEIGHT - 1) full_output += '\n';
-    }
-    cout << full_output;
-    cout.flush();
+    //Prints buffer with fwrite and flushes
+    fwrite(buffer, 1, total_buffer_size, stdout);
+    fflush(stdout);
 }  
 
 Window::Window() {
@@ -216,7 +199,7 @@ void Window::update_buffer_from_renderer() {
                     if (w + current_sprite->x < 0) continue;
                     unsigned int cr_frame = current_sprite->current_frame;
                     if (!current_sprite->transparent_white_spaces || current_sprite->sprite_frames[cr_frame][h][w] != ' ') 
-                    buffer[h + current_sprite->y][w + current_sprite->x] = current_sprite->sprite_frames[cr_frame][h][w];
+                    buffer[(h + current_sprite->y) * (WINDOWLENGTH + 1) +  w + current_sprite->x] = current_sprite->sprite_frames[cr_frame][h][w];
                 }
             }
         }
@@ -285,14 +268,14 @@ void Window::maximize_console() {
 }
 
 void Window::input() {
-    //Codul pentru input-handling. Foloseste game_loop pentru multithreading (recomandat)
-     while (Game::running) {
+    while (Game::running) {
         if (_kbhit()) {
-            char ch = _getch(); 
+            char ch = _getch();
             if (ch == 27) { Game::running = false; return; }
-            Game::push_key(ch);
+            lock_guard<mutex> lock(Game::key_mutex);
+            Game::keys_down.insert(ch); // store key as pressed
         }
-        this_thread::sleep_for(chrono::milliseconds(10));
+        this_thread::sleep_for(chrono::milliseconds(1)); // tighter loop
     }
 }
 
@@ -322,11 +305,12 @@ void Window::game_loop(function<void()> game_logic) {
     game_thread.join();
 }
 
-bool Window::get_key_pressed(char& ch) {
-    char key;
-    if (!(Game::pop_key(key))) return false;
-    ch = key;
-    return true;
+unordered_set<char> Window::get_keys_pressed() {
+    return Game::keys_down;
+}
+
+void Window::empty_keys_pressed() {
+    Game::keys_down.clear();
 }
 
 void Window::fix_console_size() {

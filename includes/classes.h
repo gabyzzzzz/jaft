@@ -58,15 +58,17 @@ public:
 
 class Window
 {
+private:
+    const unsigned int total_buffer_size = WINDOWHEIGHT * (WINDOWLENGTH + 1);
 public:
     unsigned int screen_height, screen_width;
     unsigned int nr_of_sprites_in_renderer = 0;
     double font_size_height, font_size_width;
-    char buffer[WINDOWHEIGHT][WINDOWLENGTH];
+    char buffer[WINDOWHEIGHT * (WINDOWLENGTH + 1)];
     Sprite* renderer[MAXNROFSPRITES];
 
-    void empty_renderer();
     void clean_renderer();
+    void empty_renderer();
     void update_buffer_from_renderer();
     void add_sprite_to_renderer(Sprite* sprite);
     void add_sprites_to_renderer(Sprite** sprites, unsigned int sz);
@@ -82,7 +84,8 @@ public:
     void disable_text_selection();
     void fix_zoom();
     void fix_console_size();
-    bool get_key_pressed(char& ch);
+    unordered_set<char> get_keys_pressed();
+    void empty_keys_pressed();
     void gml(function<void()> game_logic);
     void game_loop(function<void()> game_logic);
     void input();
