@@ -15,6 +15,9 @@ public:
     unsigned int nr_of_frames = 0, current_frame = 0, ticks_per_frame = 1, current_tick = 0;
     unsigned int label = 0;
     char*** sprite_frames = nullptr;
+    unsigned short int*** r = nullptr;
+    unsigned short int*** g = nullptr;
+    unsigned short int*** b = nullptr;
 
     void DEBUG_sprite();
 
@@ -59,14 +62,15 @@ public:
 class Window
 {
 private:
-    const unsigned int total_buffer_size = WINDOWHEIGHT * (WINDOWLENGTH + 1);
+    const unsigned int total_buffer_size = WINDOWHEIGHT * (WINDOWLENGTH + 1) * 20;
 public:
     unsigned int screen_height, screen_width;
     unsigned int nr_of_sprites_in_renderer = 0;
     double font_size_height, font_size_width;
-    char buffer[WINDOWHEIGHT * (WINDOWLENGTH + 1)];
+    char buffer[WINDOWHEIGHT * (WINDOWLENGTH + 1) * 20];
     Sprite* renderer[MAXNROFSPRITES];
 
+    void stringcpy(char* s1, char* s2);
     void clean_renderer();
     void empty_renderer();
     void update_buffer_from_renderer();
@@ -81,20 +85,12 @@ public:
 
     void DEBUG_fill();
     
-    void disable_text_selection();
-    void fix_zoom();
-    void fix_console_size();
     unordered_set<char> get_keys_pressed();
     void empty_keys_pressed();
     void gml(function<void()> game_logic);
     void game_loop(function<void()> game_logic);
     void input();
-    void maximize_console();
-    void hide_console_cursor();
-    void disable_console_resize();
-    void disable_console_scroll();
     void set_font_settings(unsigned int f_height, unsigned int f_width);
-    void reset_cursor();
     void config();
 
     Window();

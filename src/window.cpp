@@ -20,6 +20,100 @@ bool compare(Sprite* s1, Sprite* s2) {
     return (s1->stage < s2->stage);
 }
 
+void fix_console_size() {
+    //Config
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD newSize;
+    newSize.X = 200;
+    newSize.Y = 100; 
+    SetConsoleScreenBufferSize(hConsole, newSize);
+    SMALL_RECT winSize = { 0, 0, static_cast<SHORT>(newSize.X - 1), static_cast<SHORT>(newSize.Y - 1) };
+    SetConsoleWindowInfo(hConsole, TRUE, &winSize);
+}
+
+void fix_zoom() {
+    //Config
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode;
+    GetConsoleMode(hInput, &mode);
+    mode &= ~ENABLE_MOUSE_INPUT;
+    mode &= ~ENABLE_QUICK_EDIT_MODE;
+    SetConsoleMode(hInput, mode);
+}
+
+void disable_text_selection() {
+    //Config
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode = 0;
+    GetConsoleMode(hInput, &mode);
+    mode &= ~ENABLE_QUICK_EDIT_MODE;
+    mode |= ENABLE_EXTENDED_FLAGS | ENABLE_PROCESSED_INPUT;
+    SetConsoleMode(hInput, mode);
+}
+
+void enable_virtual_terminal() {
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD dwMode = 0;
+    GetConsoleMode(hOut, &dwMode);
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+}
+
+void reset_cursor() {
+    //Config
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD topLeft = { 0, 0 };
+    SetConsoleCursorPosition(hConsole, topLeft);
+}
+
+void disable_console_scroll() {
+    //Config
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    COORD newSize = {
+        static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
+        static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)
+    };
+    SetConsoleScreenBufferSize(hConsole, newSize);
+}
+
+void disable_console_resize() {
+    //Config
+    HWND console = GetConsoleWindow();
+    if (!console) return;
+    LONG style = GetWindowLong(console, GWL_STYLE);
+    style &= ~(WS_SIZEBOX | WS_MAXIMIZEBOX);
+    SetWindowLong(console, GWL_STYLE, style);
+    SetWindowPos(console, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+}
+
+void hide_console_cursor() {
+    //Config
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO cursorInfo;
+
+    GetConsoleCursorInfo(hConsole, &cursorInfo);
+    cursorInfo.bVisible = FALSE; 
+    SetConsoleCursorInfo(hConsole, &cursorInfo);
+}
+
+
+void maximize_console() {
+    //Config
+    HWND hwnd = GetConsoleWindow();
+    SetForegroundWindow(hwnd); 
+    keybd_event(VK_F11, 0, 0, 0);
+    keybd_event(VK_F11, 0, KEYEVENTF_KEYUP, 0);
+    fix_console_size();
+    Sleep(100);
+}
+
+void Window::stringcpy(char* s1, char* s2) {
+    for (int i = 0; s2[i] != '\0'; i++) 
+        s1[i] = s2[i];
+}
+
 void log(int err_code, int sprite_label) {
     lg << "[CONSOLE] Program exited with error code: " << err_code << '\n';
     lg << "[CONSOLE] Sprite id: " << sprite_label << '\n';
@@ -50,14 +144,14 @@ void Window::config() {
 }
 
 void Window::empty_buffer() {
-    //Not only it empties the buffer, it also puts the newlines and the null character.
+    char space[] = "\x1b[38;2;255;000;000m \0";
+    char nlchar[] = "\x1b[38;2;255;000;000m\n\0";
     for (int i = 0; i < WINDOWHEIGHT; i++) {
-        for (int j = 0; j < WINDOWLENGTH; j++) {
-            buffer[i * (WINDOWLENGTH + 1) + j] = ' ';
-        }
-        buffer[i * (WINDOWLENGTH + 1) + WINDOWLENGTH] = '\n';
+        for (int j = 0; j < WINDOWLENGTH; j++) 
+            stringcpy(buffer + (i * (WINDOWLENGTH + 1) * 20 + j * 20), space);
+        stringcpy(buffer + (i * (WINDOWLENGTH + 1) * 20 + WINDOWLENGTH * 20), nlchar);
     }
-    buffer[WINDOWHEIGHT * (WINDOWLENGTH + 1) - 1] = '\0';
+    buffer[WINDOWHEIGHT * (WINDOWLENGTH + 1) * 20 - 1] = '\0';
 }
 
 void Window::DEBUG_fill() {
@@ -69,9 +163,8 @@ void Window::DEBUG_fill() {
 }
 
 void Window::print_buffer() {
-    //Prints buffer with fwrite and flushes
+    //Prints buffer with fwrite and flushes 
     fwrite(buffer, 1, total_buffer_size, stdout);
-    fflush(stdout);
 }  
 
 Window::Window() {
@@ -92,6 +185,7 @@ Window::Window() {
     disable_console_scroll();
     disable_text_selection();
     fix_zoom();
+    enable_virtual_terminal();
     empty_buffer();
 }
 
@@ -193,13 +287,26 @@ void Window::update_buffer_from_renderer() {
             unsigned int fw = current_sprite->frame_width;
             for (unsigned int h = 0; h < fh; h++) {
                 if (!(h + current_sprite->y < WINDOWHEIGHT)) continue;
-                if (h + current_sprite->y < 0) continue;
                 for (unsigned int w = 0; w < fw; w++) {
                     if (!(w + current_sprite->x < WINDOWLENGTH)) continue;
-                    if (w + current_sprite->x < 0) continue;
                     unsigned int cr_frame = current_sprite->current_frame;
-                    if (!current_sprite->transparent_white_spaces || current_sprite->sprite_frames[cr_frame][h][w] != ' ') 
-                    buffer[(h + current_sprite->y) * (WINDOWLENGTH + 1) +  w + current_sprite->x] = current_sprite->sprite_frames[cr_frame][h][w];
+                    if (!current_sprite->transparent_white_spaces || current_sprite->sprite_frames[cr_frame][h][w] != ' ') {
+                        //char clr[21] = "\x1b[38;2;<r>;<g>;<b>m<char>";
+                        string clr = "\x1b[38;2;"; 
+                        if (current_sprite->r[cr_frame][h][w] > 99) clr += to_string(current_sprite->r[cr_frame][h][w]) + ";";
+                        else if (current_sprite->r[cr_frame][h][w] > 9) clr += "0" + to_string(current_sprite->r[cr_frame][h][w]) + ";";
+                        else clr += "00" + to_string(current_sprite->r[cr_frame][h][w]) + ";";
+                        if (current_sprite->g[cr_frame][h][w] > 99) clr += to_string(current_sprite->g[cr_frame][h][w]) + ";";
+                        else if (current_sprite->g[cr_frame][h][w] > 9) clr += "0" + to_string(current_sprite->g[cr_frame][h][w]) + ";";
+                        else clr += "00" + to_string(current_sprite->g[cr_frame][h][w]) + ";";
+                        if (current_sprite->b[cr_frame][h][w] > 99) clr += to_string(current_sprite->b[cr_frame][h][w]) + "m";
+                        else if (current_sprite->b[cr_frame][h][w] > 9) clr += "0" + to_string(current_sprite->b[cr_frame][h][w]) + "m";
+                        else clr += "00" + to_string(current_sprite->b[cr_frame][h][w]) + "m";
+                        clr += current_sprite->sprite_frames[cr_frame][h][w];
+                        char clr_char[21] = {0};
+                        strncpy(clr_char, clr.c_str(), clr.size());
+                        stringcpy(buffer + ((h + current_sprite->y) * (WINDOWLENGTH + 1) * 20 +  (w + current_sprite->x) * 20), clr_char);
+                    }
                 }
             }
         }
@@ -217,65 +324,15 @@ void Window::remove_sprite_from_renderer(Sprite* sprite) {
     clean_renderer();
 }
 
-void Window::reset_cursor() {
-    //Config
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    COORD topLeft = { 0, 0 };
-    SetConsoleCursorPosition(hConsole, topLeft);
-}
-
-void Window::disable_console_scroll() {
-    //Config
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo(hConsole, &csbi);
-    COORD newSize = {
-        static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
-        static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)
-    };
-    SetConsoleScreenBufferSize(hConsole, newSize);
-}
-
-void Window::disable_console_resize() {
-    //Config
-    HWND console = GetConsoleWindow();
-    if (!console) return;
-    LONG style = GetWindowLong(console, GWL_STYLE);
-    style &= ~(WS_SIZEBOX | WS_MAXIMIZEBOX);
-    SetWindowLong(console, GWL_STYLE, style);
-    SetWindowPos(console, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-}
-
-void Window::hide_console_cursor() {
-    //Config
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    CONSOLE_CURSOR_INFO cursorInfo;
-
-    GetConsoleCursorInfo(hConsole, &cursorInfo);
-    cursorInfo.bVisible = FALSE; 
-    SetConsoleCursorInfo(hConsole, &cursorInfo);
-}
-
-
-void Window::maximize_console() {
-    //Config
-    HWND hwnd = GetConsoleWindow();
-    SetForegroundWindow(hwnd); 
-    keybd_event(VK_F11, 0, 0, 0);
-    keybd_event(VK_F11, 0, KEYEVENTF_KEYUP, 0);
-    fix_console_size();
-    Sleep(100);
-}
-
 void Window::input() {
     while (Game::running) {
         if (_kbhit()) {
             char ch = _getch();
             if (ch == 27) { Game::running = false; return; }
             lock_guard<mutex> lock(Game::key_mutex);
-            Game::keys_down.insert(ch); // store key as pressed
+            Game::keys_down.insert(ch);
         }
-        this_thread::sleep_for(chrono::milliseconds(1)); // tighter loop
+        this_thread::sleep_for(chrono::milliseconds(1));
     }
 }
 
@@ -311,35 +368,4 @@ unordered_set<char> Window::get_keys_pressed() {
 
 void Window::empty_keys_pressed() {
     Game::keys_down.clear();
-}
-
-void Window::fix_console_size() {
-    //Config
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    COORD newSize;
-    newSize.X = 200;
-    newSize.Y = 100; 
-    SetConsoleScreenBufferSize(hConsole, newSize);
-    SMALL_RECT winSize = { 0, 0, static_cast<SHORT>(newSize.X - 1), static_cast<SHORT>(newSize.Y - 1) };
-    SetConsoleWindowInfo(hConsole, TRUE, &winSize);
-}
-
-void Window::fix_zoom() {
-    //Config
-    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-    DWORD mode;
-    GetConsoleMode(hInput, &mode);
-    mode &= ~ENABLE_MOUSE_INPUT;
-    mode &= ~ENABLE_QUICK_EDIT_MODE;
-    SetConsoleMode(hInput, mode);
-}
-
-void Window::disable_text_selection() {
-    //Config
-    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-    DWORD mode = 0;
-    GetConsoleMode(hInput, &mode);
-    mode &= ~ENABLE_QUICK_EDIT_MODE;
-    mode |= ENABLE_EXTENDED_FLAGS | ENABLE_PROCESSED_INPUT;
-    SetConsoleMode(hInput, mode);
 }

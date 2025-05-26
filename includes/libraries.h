@@ -13,6 +13,7 @@
 #include <conio.h>
 #include <queue>
 #include <mutex>
+#include <cstring>
 #include <unordered_set>
 
 using namespace std;

@@ -8,19 +8,22 @@ void Sprite::init_by_file(const char file_name[]) {
     if (!in.is_open()) log(401, label);
     if (!(in >> frame_height >> frame_width >> nr_of_frames)) log(402, label);
     if (frame_height < 1 || frame_width < 1 || nr_of_frames < 1) log(403, label);
-    string input;
-    //Scapam de primul new line
-    getline(in, input);
     sprite_frames = new char**[nr_of_frames];
+    r = new unsigned short int**[nr_of_frames];
+    g = new unsigned short int**[nr_of_frames];
+    b = new unsigned short int**[nr_of_frames];
     for (unsigned int f = 0; f < nr_of_frames; f++) {
         sprite_frames[f] = new char*[frame_height];
-        //Scapam de new line
-        getline(in, input);
+        r[f] = new unsigned short int*[frame_height];
+        g[f] = new unsigned short int*[frame_height];
+        b[f] = new unsigned short int*[frame_height];
         for (unsigned int h = 0; h < frame_height; h++) {
             sprite_frames[f][h] = new char[frame_width + 1];
-            getline(in, input);
-            //Daca am ajuns la sfarsitul liniei inlocuim caracterele cu spatii libere
-            for (unsigned int w = 0; w < frame_width; w++) sprite_frames[f][h][w] = (w < input.length()) ? input[w] : ' ';
+            r[f][h] = new unsigned short int[frame_width];
+            g[f][h] = new unsigned short int[frame_width];
+            b[f][h] = new unsigned short int[frame_width];
+            for (unsigned int w = 0; w < frame_width; w++) 
+                in >> r[f][h][w] >> g[f][h][w] >> b[f][h][w] >> sprite_frames[f][h][w];
             sprite_frames[f][h][frame_width] = '\0';
         }
     }
@@ -41,9 +44,20 @@ void Sprite::DEBUG_sprite() {
 Sprite::~Sprite() {
     //Eliberam memoria folosita (De modificat daca mai folosim memorie alocata dinamic)
     for (unsigned int f = 0; f < nr_of_frames; f++) {
-        for (unsigned int i = 0; i < frame_height; i++) delete[] sprite_frames[f][i];
+        for (unsigned int i = 0; i < frame_height; i++) {
+            delete[] sprite_frames[f][i];
+            delete[] g[f][i];
+            delete[] g[f][i];
+            delete[] g[f][i];
+        }
         delete[] sprite_frames[f];
+        delete[] r[f];
+        delete[] g[f];
+        delete[] b[f];
     }
+    delete[] r;
+    delete[] g;
+    delete[] b;
     delete[] sprite_frames;
 }
 
