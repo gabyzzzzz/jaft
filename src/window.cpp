@@ -1,7 +1,7 @@
 #include "../includes/libraries.h"
 #include "../includes/defines.h"
 #include "../includes/classes.h"
-#include "../third_party/json.hpp"
+#include "../other/third_party/json.hpp"
 
 using json = nlohmann::json;
 ofstream lg("log.txt", ios::app);

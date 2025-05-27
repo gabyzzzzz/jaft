@@ -22,8 +22,11 @@ void Sprite::init_by_file(const char file_name[]) {
             r[f][h] = new unsigned short int[frame_width];
             g[f][h] = new unsigned short int[frame_width];
             b[f][h] = new unsigned short int[frame_width];
-            for (unsigned int w = 0; w < frame_width; w++) 
-                in >> r[f][h][w] >> g[f][h][w] >> b[f][h][w] >> sprite_frames[f][h][w];
+            int ch;
+            for (unsigned int w = 0; w < frame_width; w++) {
+                in >> r[f][h][w] >> g[f][h][w] >> b[f][h][w] >> ch;
+                sprite_frames[f][h][w] = (char) ch;
+            }
             sprite_frames[f][h][frame_width] = '\0';
         }
     }
