@@ -14,13 +14,13 @@ using namespace std;
 //      | FEEL FREE TO USE THIS FOR TESTING PURPOSES  |
 //      ----------------------------------------------
 
-Sprite brush("../other/tools/sprite_editor/brush.spr", 0); //    The literal brush you use for "painting"
+Sprite brush("brush.spr", 0); //    The literal brush you use for "painting"
 Sprite* canvas = new Sprite(1);
 Window window;
 
 bool saved = true;
 unsigned int c_frame = 0;
-string cd = "../other/tools/sprite_editor/";
+string crdir = "";
 
 void new_canvas() {
     canvas->sprite_frames = new char**[canvas->nr_of_frames];
@@ -84,7 +84,7 @@ void get_command() {
         if (confirm_unsaved_file()) {
             cout << "[CONSOLE] What file do you want to open?\n>_ ";
             cin >> args;
-            string conct = cd + args;
+            string conct = crdir + args;
             char file_name[101];
             strncpy(file_name, conct.c_str(), conct.size());
             if (canvas) delete canvas;
@@ -99,7 +99,7 @@ void get_command() {
         if (confirm_unsaved_file()) {
             cout << "[CONSOLE] What is the name of the file you want to create?\n>_ ";
             cin >> args;
-            string conct = cd + args;
+            string conct = crdir + args;
             char file_name[101];
             strncpy(file_name, conct.c_str(), conct.size());
             if (canvas) delete canvas;
@@ -127,7 +127,7 @@ void get_command() {
         cout << "[CONSOLE] What is the name of the file?\n>_ ";
         string file_name, cnct;
         cin >> file_name;
-        cnct = cd + file_name;
+        cnct = crdir + file_name;
         ofstream out(cnct);
         out << canvas->frame_height << ' ' << canvas->frame_width << ' ' << canvas->nr_of_frames << ' ';
         for (unsigned int f = 0; f < canvas->nr_of_frames; f++) 
@@ -135,11 +135,12 @@ void get_command() {
         for (unsigned int w = 0; w < canvas->frame_width; w++) 
         out << canvas->r[f][h][w] << ' ' << canvas->g[f][h][w] << ' ' << 
         canvas->b[f][h][w] << ' ' << (int) canvas->sprite_frames[f][h][w] << ' ';
+        out.flush();
         continue;
     }
 
     if (command_name == "cd") {
-        cin >> cd;
+        cin >> crdir;
         continue;
     }
 
