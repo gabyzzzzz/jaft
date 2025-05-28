@@ -328,7 +328,6 @@ void Window::input() {
     while (Game::running) {
         if (_kbhit()) {
             char ch = _getch();
-            if (ch == 27) { Game::running = false; return; }
             lock_guard<mutex> lock(Game::key_mutex);
             Game::keys_down.insert(ch);
         }
