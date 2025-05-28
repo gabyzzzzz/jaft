@@ -14,12 +14,15 @@ using namespace std;
 //      | FEEL FREE TO USE THIS FOR TESTING PURPOSES  |
 //      ----------------------------------------------
 
+struct rectangle {
+    unsigned int x1, y1, x2, y2;
+};
+
 Sprite brush("brush.spr", 0); //    The literal brush you use for "painting"
 Sprite* canvas = new Sprite(1);
 Window window;
 
 bool saved = true;
-unsigned int c_frame = 0;
 string crdir = "";
 string crfile = "";
 
@@ -33,6 +36,48 @@ void save_to(string cnct) {
     canvas->b[f][h][w] << ' ' << (int) canvas->sprite_frames[f][h][w] << ' ';
     out.flush();
     cout << "[CONSOLE] Successfully saved file.\n";
+    saved = true;
+}
+
+rectangle get_drawing() {
+    unsigned int y_limit = canvas->frame_height, x_limit = canvas->frame_width;
+    unsigned int cf = canvas->current_frame;
+
+    rectangle rt_val = {0, 0, 0, 0};
+
+    for (unsigned int y = 0; y < y_limit; y++) 
+    for (unsigned int x = 0; x < x_limit; x++) 
+    if (canvas->sprite_frames[cf][y][x] != ' ') {
+        rt_val.y1 = y;
+        goto done1;
+    }
+    done1:
+    
+    for (unsigned int x = 0; x < x_limit; x++) 
+    for (unsigned int y = 0; y < y_limit; y++) 
+    if (canvas->sprite_frames[cf][y][x] != ' ') {
+        rt_val.x1 = x;
+        goto done2;
+    }
+    done2:
+
+    for (int x = x_limit - 1; x >= 0; x--) 
+    for (unsigned int y = 0; y < y_limit; y++) 
+    if (canvas->sprite_frames[cf][y][x] != ' ') {
+        rt_val.x2 = x;
+        goto done3;
+    } 
+    done3:
+
+    for (int y = y_limit - 1; y >= 0; y--) 
+    for (unsigned int x = 0; x < x_limit; x++) 
+    if (canvas->sprite_frames[cf][y][x] != ' ') {
+        rt_val.y2 = y;
+        goto done4;
+    }
+    done4:
+
+    return rt_val;
 }
 
 void new_canvas() {
@@ -157,7 +202,7 @@ void get_command() {
     if (command_name == "setchar") {
         string input;
         cin >> input;
-        if (input.size() > 1) brush.sprite_frames[0][0][0] = ' ';
+        if (input == "32") brush.sprite_frames[0][0][0] = ' ';
         else brush.sprite_frames[0][0][0] = input[0];
         continue;
     }
@@ -180,6 +225,20 @@ void get_command() {
         cin >> canvas->current_frame;
         if (canvas->current_frame >= canvas->nr_of_frames) canvas->current_frame = 0;
         continue;
+    }
+
+    if (command_name == "align") {
+        rectangle to_copy = get_drawing();
+        unsigned int cf = canvas->current_frame;
+        for (int y = to_copy.y1; y <= to_copy.y2; y++) {
+            for (int x = to_copy.x1; x <= to_copy.x2; x++) {
+                canvas->sprite_frames[cf][y - to_copy.y1][x - to_copy.x1] = canvas->sprite_frames[cf][y][x];
+                canvas->r[cf][y - to_copy.y1][x - to_copy.x1] = canvas->r[cf][y][x];
+                canvas->g[cf][y - to_copy.y1][x - to_copy.x1] = canvas->g[cf][y][x];
+                canvas->b[cf][y - to_copy.y1][x - to_copy.x1] = canvas->b[cf][y][x];
+                canvas->sprite_frames[cf][y][x] = ' ';
+            }
+        }
     }
 
     if (command_name == "esc") if (confirm_unsaved_file()) exit(0);
@@ -209,6 +268,7 @@ void loop () {
     //  Handle commands
     if (input.count('i')) get_command();
     if (input.count('p')) {
+        unsigned int c_frame = canvas->current_frame;
         canvas->sprite_frames[c_frame][brush.y][brush.x] = brush.sprite_frames[0][0][0];
         canvas->r[c_frame][brush.y][brush.x] = brush.r[0][0][0];
         canvas->g[c_frame][brush.y][brush.x] = brush.g[0][0][0];
@@ -220,6 +280,7 @@ void loop () {
 }
 
 int main() { 
+    brush.transparent_white_spaces = false;
     brush.stage = 1;
     window.add_sprite_to_renderer(&brush);
     window.add_sprite_to_renderer(canvas);
