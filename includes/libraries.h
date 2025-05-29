@@ -15,5 +15,6 @@
 #include <mutex>
 #include <cstring>
 #include <unordered_set>
+#include <sstream>
 
 using namespace std;

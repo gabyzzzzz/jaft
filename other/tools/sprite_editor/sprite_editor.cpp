@@ -35,6 +35,7 @@ vector<string> tokenize_input(string input) {
             ret_val.push_back(c_token);
             c_token = "";
         } else c_token += input[i];
+        i++;
     }
     return ret_val;
 }
