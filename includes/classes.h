@@ -8,7 +8,7 @@ void log(int err_code, int sprite_label = 0);
 class Sprite
 {
 public:
-    bool visible = true, is_animation_active = true, transparent_white_spaces = true;
+    bool visible = true, is_animation_active = false, transparent_white_spaces = true;
     unsigned int x = 0, y = 0;
     unsigned int frame_height = 0, frame_width = 0;
     unsigned int stage = 0;
@@ -19,8 +19,9 @@ public:
     unsigned short int*** g = nullptr;
     unsigned short int*** b = nullptr;
 
-    void DEBUG_sprite();
+    void DEBUG_sprite(); // A bit outdated
 
+    void next_game_tick();
     bool is_colliding(Sprite* sprite);
     bool is_colliding(Sprite* sprite, const char characters[], unsigned int sz);
 
@@ -37,7 +38,7 @@ public:
     unsigned int nr_of_sprites = 0;
     Sprite** sprites;
 
-    void DEBUG_scene();
+    void DEBUG_scene(); //  A bit outdated
     void clean();
     void hide_scene();
     void show_scene();
@@ -83,7 +84,7 @@ public:
     void print_buffer();
     void empty_buffer();
 
-    void DEBUG_fill();
+    void DEBUG_fill(); //   A bit outdated
     
     unordered_set<char> get_keys_pressed();
     void empty_keys_pressed();

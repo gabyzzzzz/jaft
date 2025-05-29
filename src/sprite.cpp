@@ -103,3 +103,13 @@ bool Sprite::is_colliding(Sprite* sprite, const char characters[], unsigned int 
     }
     return false; 
 }
+
+void Sprite::next_game_tick() {
+    current_tick++;
+    if (current_tick >= ticks_per_frame) {
+        current_tick = 0;
+        current_frame++;
+        if (current_frame >= nr_of_frames) 
+            current_frame = 0;
+    }
+}

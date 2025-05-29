@@ -26,6 +26,19 @@ bool saved = true;
 string crdir = "";
 string crfile = "";
 
+vector<string> tokenize_input(string input) {
+    vector<string> ret_val;
+    string c_token = "";
+    unsigned int i = 0, sz = input.size();
+    while (i < sz) {
+        if (input[i] == ' ') {
+            ret_val.push_back(c_token);
+            c_token = "";
+        } else c_token += input[i];
+    }
+    return ret_val;
+}
+
 void save_to(string cnct) {
     ofstream out(cnct);
     out << canvas->frame_height << ' ' << canvas->frame_width << ' ' << canvas->nr_of_frames << ' ';
@@ -129,20 +142,21 @@ void get_command() {
     COORD topLeft = { 0, 0 };
     SetConsoleCursorPosition(hConsole, topLeft);
     window.set_font_settings(15, 15);
-    string command_name, args;
-
+    string input;
+    vector<string> tokens;
     do {
     // Handle console input
     cout << "\x1b[38;2;255;255;255m";
     cout << "> ";
-    cin >> command_name;
-
+    cin >> input;
+    tokens = tokenize_input(input);
+    
     //  Identify and execute command
-    if (command_name == "open") {
+    if (tokens[0] == "open") {
         //  Opening file
         if (confirm_unsaved_file()) {
-            cin >> args;
-            string conct = crdir + args;
+            //  Set current path
+            string conct = crdir + tokens[1];
             char file_name[101];
             strncpy(file_name, conct.c_str(), conct.size());
             ifstream in(file_name);
@@ -152,82 +166,75 @@ void get_command() {
                 if (canvas) delete canvas;
                 canvas = new Sprite(file_name, 1);
                 cout << "[CONSOLE] Successfully opened file.\n";
-                crfile = args;
+                crfile = tokens[1];
                 in.close();
             }
         }
         continue;
     }
 
-    if (command_name == "create") {
+    if (tokens[0] == "create") {
         //  Opening file
         if (confirm_unsaved_file()) {
-            cin >> args;
-            string conct = crdir + args;
+            string conct = crdir + tokens[1];
             char file_name[101];
             strncpy(file_name, conct.c_str(), conct.size());
             if (canvas) delete canvas;
             canvas = new Sprite(1);
             ofstream out(file_name);
             if (!(out.is_open())) { cout << "[CONSOLE] Could not create the file. Aborting...\n"; continue; }
-            unsigned int szinput;
-            cin >> szinput;
-            canvas->nr_of_frames = szinput;
-            cin >> szinput;
-            canvas->frame_height = szinput;
-            cin >> szinput;
-            canvas->frame_width = szinput;
+            canvas->nr_of_frames = stoi(tokens[1]);
+            canvas->frame_height = stoi(tokens[2]);
+            canvas->frame_width = stoi(tokens[3]);
             new_canvas();
             cout << "[CONSOLE] Successfully created file.\n";
-            crfile = args;
+            crfile = tokens[1];
         }
 
         continue;
     }
 
-    if (command_name == "saveas") {
-        string file_name, cnct;
-        cin >> file_name;
-        cnct = crdir + file_name;
+    if (tokens[0] == "saveas") {
+        string cnct = crdir + tokens[1];
         save_to(cnct);
         continue;
     }
 
-    if (command_name == "cd") {
-        cin >> crdir;
+    if (tokens[0] == "cd") {
+        crdir = tokens[1];
         if ((crdir[0] == '/') && (crdir.size() == 1)) crdir = "";
         continue;
     }
 
-    if (command_name == "setchar") {
-        string input;
-        cin >> input;
-        if (input == "32") brush.sprite_frames[0][0][0] = ' ';
-        else brush.sprite_frames[0][0][0] = input[0];
+    if (tokens[0] == "setchar") {
+        if (tokens[1] == "32") brush.sprite_frames[0][0][0] = ' ';
+        else brush.sprite_frames[0][0][0] = tokens[1][0];
         continue;
     }
 
-    if (command_name == "color") {
-        cin >> brush.r[0][0][0] >> brush.g[0][0][0] >> brush.b[0][0][0];
+    if (tokens[0] == "color") {
+        brush.r[0][0][0] = stoi(tokens[1]);
+        brush.g[0][0][0] = stoi(tokens[2]);
+        brush.b[0][0][0] = stoi(tokens[3]);
         if (brush.r[0][0][0] > 255 || brush.g[0][0][0] > 255 || brush.b[0][0][0] > 255) 
         cout << "[CONSOLE] Invalid rgb code.\n";
         continue;
     }
 
-    if (command_name == "save") {
+    if (tokens[0] == "save") {
         string cnct;
         cnct = crdir + crfile;
         save_to(cnct);
         continue;
     }
 
-    if (command_name == "setframe") {
-        cin >> canvas->current_frame;
+    if (tokens[0] == "setframe") {
+        canvas->current_frame = stoi(tokens[1]);
         if (canvas->current_frame >= canvas->nr_of_frames) canvas->current_frame = 0;
         continue;
     }
 
-    if (command_name == "align") {
+    if (tokens[0] == "align") {
         rectangle to_copy = get_drawing();
         unsigned int cf = canvas->current_frame;
         for (int y = to_copy.y1; y <= to_copy.y2; y++) {
@@ -239,11 +246,31 @@ void get_command() {
                 canvas->sprite_frames[cf][y][x] = ' ';
             }
         }
+        continue;
     }
 
-    if (command_name == "esc") if (confirm_unsaved_file()) exit(0);
+    if (tokens[0] == "astr") {
+        brush.visible = false;
+        canvas->is_animation_active = true;
+        continue;
+    }
 
-    } while (command_name != "exit");
+    if (tokens[0] == "astp") {
+        brush.visible = true;
+        canvas->is_animation_active = false;
+        continue;
+    }
+
+    if (tokens[0] == "tpf") {
+        int value = stoi(tokens[1]);
+        if (value <= 0) { cout << "[CONSOLE] Ticks per frame must be greater than 0.\n"; continue; }
+        canvas->ticks_per_frame = value;
+        continue;
+    }
+
+    if (tokens[0] == "esc") if (confirm_unsaved_file()) exit(0);
+
+    } while (tokens[0] != "exit");
 
     unsigned int font_h = round((double) window.screen_height / FONT_RATIO_HEIGHT);
     unsigned int font_w = round((double) window.screen_width / FONT_RATIO_LENGTH);
@@ -267,7 +294,7 @@ void loop () {
 
     //  Handle commands
     if (input.count('i')) get_command();
-    if (input.count('p')) {
+    if (input.count('p') && brush.visible) {
         unsigned int c_frame = canvas->current_frame;
         canvas->sprite_frames[c_frame][brush.y][brush.x] = brush.sprite_frames[0][0][0];
         canvas->r[c_frame][brush.y][brush.x] = brush.r[0][0][0];
@@ -277,6 +304,7 @@ void loop () {
     }
 
     window.empty_keys_pressed();
+    if (canvas->is_animation_active) canvas->next_game_tick();
 }
 
 int main() { 
