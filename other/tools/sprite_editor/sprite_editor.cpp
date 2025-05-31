@@ -110,7 +110,6 @@ void new_canvas() {
             canvas->r[f][h] = new unsigned short int[canvas->frame_width];
             canvas->g[f][h] = new unsigned short int[canvas->frame_width];
             canvas->b[f][h] = new unsigned short int[canvas->frame_width];
-            int ch;
             for (unsigned int w = 0; w < canvas->frame_width; w++) {
                 canvas->sprite_frames[f][h][w] = ' ';
                 canvas->r[f][h][w] = 255;
@@ -171,7 +170,8 @@ void get_command() {
             if (!(in.is_open())) {
                 cout << "[CONSOLE] Could not find specified file \"" + conct << "\"\n";
             } else {
-                if (canvas) delete canvas;
+                delete canvas;
+                canvas = nullptr;
                 canvas = new Sprite(file_name, 1);
                 cout << "[CONSOLE] Successfully opened file.\n";
                 crfile = tokens[1];
@@ -192,7 +192,8 @@ void get_command() {
             else file_name[100] = '\0';
             ofstream out(file_name);
             if (!(out.is_open())) { cout << "[CONSOLE] Could not create the file. Aborting...\n"; continue; }
-            if (canvas) delete canvas;
+            delete canvas;
+            canvas = nullptr;
             canvas = new Sprite(1);
             canvas->nr_of_frames = stoi(tokens[2]);
             canvas->frame_height = stoi(tokens[3]);
@@ -231,7 +232,7 @@ void get_command() {
         brush.r[0][0][0] = stoi(tokens[1]);
         brush.g[0][0][0] = stoi(tokens[2]);
         brush.b[0][0][0] = stoi(tokens[3]);
-        if (brush.r[0][0][0] > 255 || brush.g[0][0][0] > 255 || brush.b[0][0][0] > 255) 
+        if (brush.r[0][0][0] > 256 || brush.g[0][0][0] > 256 || brush.b[0][0][0] > 256) 
         cout << "[CONSOLE] Invalid rgb code.\n";
         continue;
     }
@@ -291,6 +292,13 @@ void get_command() {
 
     } while (tokens[0] != "exit");
 
+    window.remove_sprites_from_renderer([](Sprite* d){
+        if (d->label == 1) return true;
+        else return false;
+    });
+    window.add_sprite_to_renderer(canvas);
+    brush.x = 0; brush.y = 0;
+
     unsigned int font_h = round((double) window.screen_height / FONT_RATIO_HEIGHT);
     unsigned int font_w = round((double) window.screen_width / FONT_RATIO_LENGTH);
     window.set_font_settings(font_h, font_w);
@@ -330,7 +338,6 @@ int main() {
     brush.transparent_white_spaces = false;
     brush.stage = 1;
     window.add_sprite_to_renderer(&brush);
-    window.add_sprite_to_renderer(canvas);
     get_command();
     window.game_loop(loop);
     return 0;
