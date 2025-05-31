@@ -49,9 +49,9 @@ Sprite::~Sprite() {
     for (unsigned int f = 0; f < nr_of_frames; f++) {
         for (unsigned int i = 0; i < frame_height; i++) {
             delete[] sprite_frames[f][i];
+            delete[] r[f][i];
             delete[] g[f][i];
-            delete[] g[f][i];
-            delete[] g[f][i];
+            delete[] b[f][i];
         }
         delete[] sprite_frames[f];
         delete[] r[f];

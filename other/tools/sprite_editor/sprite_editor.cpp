@@ -156,7 +156,6 @@ void get_command() {
     getline(cin, input);
     tokens = tokenize_input(input);
     
-    if (tokens[0] == "") { cout << "[CONSOLE] Enter a command first.\n"; continue; } 
     //  Identify and execute command
     if (tokens[0] == "open") {
         //  Opening file
@@ -191,10 +190,10 @@ void get_command() {
             strncpy(file_name, conct.c_str(), conct.size());
             if (conct.size() < 101) file_name[conct.size()] = '\0';
             else file_name[100] = '\0';
-            if (canvas) delete canvas;
-            canvas = new Sprite(1);
             ofstream out(file_name);
             if (!(out.is_open())) { cout << "[CONSOLE] Could not create the file. Aborting...\n"; continue; }
+            if (canvas) delete canvas;
+            canvas = new Sprite(1);
             canvas->nr_of_frames = stoi(tokens[2]);
             canvas->frame_height = stoi(tokens[3]);
             canvas->frame_width = stoi(tokens[4]);
