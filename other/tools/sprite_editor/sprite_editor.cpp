@@ -28,16 +28,17 @@ string crfile = "";
 
 vector<string> tokenize_input(string input) {
     vector<string> ret_val;
-    string c_token = "";
-    unsigned int i = 0, sz = input.size();
-    while (i < sz) {
+    string t;
+    int sz = input.size();
+    for (int i = 0; i < sz; i++) {
         if (input[i] == ' ') {
-            ret_val.push_back(c_token);
-            c_token = "";
-        } else c_token += input[i];
-        i++;
+            if (!t.empty()) ret_val.push_back(t);
+            t.clear();
+        } else if (isprint(input[i])) t += input[i];
     }
-    return ret_val;
+    if (!t.empty()) ret_val.push_back(t);
+    if (!ret_val.empty()) return ret_val;
+    else return {""};
 }
 
 void save_to(string cnct) {
@@ -137,29 +138,36 @@ bool confirm_unsaved_file() {
 }
 
 void get_command() {
+
     window.empty_buffer();
     window.print_buffer();
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     COORD topLeft = { 0, 0 };
     SetConsoleCursorPosition(hConsole, topLeft);
     window.set_font_settings(15, 15);
+    cout << "\x1b[38;2;255;255;255m";
+
     string input;
     vector<string> tokens;
+
     do {
     // Handle console input
-    cout << "\x1b[38;2;255;255;255m";
     cout << "> ";
-    cin >> input;
+    getline(cin, input);
     tokens = tokenize_input(input);
     
+    if (tokens[0] == "") { cout << "[CONSOLE] Enter a command first.\n"; continue; } 
     //  Identify and execute command
     if (tokens[0] == "open") {
         //  Opening file
+        if (tokens.size() < 2) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
         if (confirm_unsaved_file()) {
             //  Set current path
             string conct = crdir + tokens[1];
             char file_name[101];
             strncpy(file_name, conct.c_str(), conct.size());
+            if (conct.size() < 101) file_name[conct.size()] = '\0';
+            else file_name[100] = '\0';
             ifstream in(file_name);
             if (!(in.is_open())) {
                 cout << "[CONSOLE] Could not find specified file \"" + conct << "\"\n";
@@ -176,17 +184,20 @@ void get_command() {
 
     if (tokens[0] == "create") {
         //  Opening file
+        if (tokens.size() < 5) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
         if (confirm_unsaved_file()) {
             string conct = crdir + tokens[1];
             char file_name[101];
             strncpy(file_name, conct.c_str(), conct.size());
+            if (conct.size() < 101) file_name[conct.size()] = '\0';
+            else file_name[100] = '\0';
             if (canvas) delete canvas;
             canvas = new Sprite(1);
             ofstream out(file_name);
             if (!(out.is_open())) { cout << "[CONSOLE] Could not create the file. Aborting...\n"; continue; }
-            canvas->nr_of_frames = stoi(tokens[1]);
-            canvas->frame_height = stoi(tokens[2]);
-            canvas->frame_width = stoi(tokens[3]);
+            canvas->nr_of_frames = stoi(tokens[2]);
+            canvas->frame_height = stoi(tokens[3]);
+            canvas->frame_width = stoi(tokens[4]);
             new_canvas();
             cout << "[CONSOLE] Successfully created file.\n";
             crfile = tokens[1];
@@ -196,24 +207,28 @@ void get_command() {
     }
 
     if (tokens[0] == "saveas") {
+        if (tokens.size() < 2) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
         string cnct = crdir + tokens[1];
         save_to(cnct);
         continue;
     }
 
     if (tokens[0] == "cd") {
+        if (tokens.size() < 2) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
         crdir = tokens[1];
         if ((crdir[0] == '/') && (crdir.size() == 1)) crdir = "";
         continue;
     }
 
     if (tokens[0] == "setchar") {
+        if (tokens.size() < 2) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
         if (tokens[1] == "32") brush.sprite_frames[0][0][0] = ' ';
         else brush.sprite_frames[0][0][0] = tokens[1][0];
         continue;
     }
 
     if (tokens[0] == "color") {
+        if (tokens.size() < 4) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
         brush.r[0][0][0] = stoi(tokens[1]);
         brush.g[0][0][0] = stoi(tokens[2]);
         brush.b[0][0][0] = stoi(tokens[3]);
@@ -230,6 +245,7 @@ void get_command() {
     }
 
     if (tokens[0] == "setframe") {
+        if (tokens.size() < 2) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
         canvas->current_frame = stoi(tokens[1]);
         if (canvas->current_frame >= canvas->nr_of_frames) canvas->current_frame = 0;
         continue;
@@ -263,6 +279,7 @@ void get_command() {
     }
 
     if (tokens[0] == "tpf") {
+        if (tokens.size() < 2) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
         int value = stoi(tokens[1]);
         if (value <= 0) { cout << "[CONSOLE] Ticks per frame must be greater than 0.\n"; continue; }
         canvas->ticks_per_frame = value;
@@ -270,6 +287,8 @@ void get_command() {
     }
 
     if (tokens[0] == "esc") if (confirm_unsaved_file()) exit(0);
+
+    if (tokens[0] != "exit") cout << "[CONSOLE] Invalid command\n";
 
     } while (tokens[0] != "exit");
 
