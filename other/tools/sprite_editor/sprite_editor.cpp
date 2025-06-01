@@ -14,6 +14,8 @@ using namespace std;
 //      | FEEL FREE TO USE THIS FOR TESTING PURPOSES  |
 //      ----------------------------------------------
 
+const double FONT_WIDTH_MULTIPLIER = 2.35;
+
 struct rectangle {
     unsigned int x1, y1, x2, y2;
 };
@@ -21,6 +23,8 @@ struct rectangle {
 Sprite brush("brush.spr", 0); //    The literal brush you use for "painting"
 Sprite* canvas = new Sprite(1);
 Window window;
+
+POINT p;
 
 bool saved = true;
 string crdir = "";
@@ -304,24 +308,55 @@ void get_command() {
     window.set_font_settings(font_h, font_w);
 }
 
+
+//  -----------------------------------CHATGPT CODE DONT TOUCH IT----------------------------------------
+
+HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+INPUT_RECORD inputRecord;
+DWORD events;
+
+void setup_input() {
+    DWORD mode;
+    GetConsoleMode(hInput, &mode);
+    mode |= ENABLE_MOUSE_INPUT;
+    mode &= ~ENABLE_QUICK_EDIT_MODE;
+    mode |= ENABLE_EXTENDED_FLAGS;
+    SetConsoleMode(hInput, mode);
+}
+
+bool left_mouse_down() {
+    DWORD numEvents = 0;
+    GetNumberOfConsoleInputEvents(hInput, &numEvents);
+    if (numEvents == 0) return false; 
+    PeekConsoleInput(hInput, &inputRecord, 1, &events);
+    if (inputRecord.EventType == MOUSE_EVENT) {
+        MOUSE_EVENT_RECORD& mouse = inputRecord.Event.MouseEvent;
+        if (mouse.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED) {
+            ReadConsoleInput(hInput, &inputRecord, 1, &events); 
+            return true;
+        }
+    }
+    ReadConsoleInput(hInput, &inputRecord, 1, &events);
+    return false;
+}
+
+//  -----------------------------------------------------------------------------------------------------
+
 void loop () {
     unordered_set<char> input = window.get_keys_pressed();
     //  Handle brush movement
-    pair<int, int> coords;
-    coords = make_pair(brush.x, brush.y);
-    if (input.count('w')) brush.y--;
-    if (input.count('a')) brush.x--;
-    if (input.count('s')) brush.y++;
-    if (input.count('d')) brush.x++;
+    GetCursorPos(&p);
+    unsigned int x = (double)p.x / ((double) window.screen_width / FONT_RATIO_LENGTH) * FONT_WIDTH_MULTIPLIER;
+    unsigned int y = (double)p.y / ((double) window.screen_height / FONT_RATIO_HEIGHT);
 
-    if (canvas->frame_height <= brush.y || canvas->frame_width <= brush.x) {
-        brush.x = coords.first;
-        brush.y = coords.second;
+    if (canvas->frame_height > y && canvas->frame_width > x) {
+        brush.x = x;
+        brush.y = y;
     }
 
     //  Handle commands
-    if (input.count('i')) get_command();
-    if (input.count('p') && brush.visible) {
+    if (input.count('c')) get_command();
+    if (left_mouse_down() && brush.visible) {
         unsigned int c_frame = canvas->current_frame;
         canvas->sprite_frames[c_frame][brush.y][brush.x] = brush.sprite_frames[0][0][0];
         canvas->r[c_frame][brush.y][brush.x] = brush.r[0][0][0];
@@ -335,6 +370,7 @@ void loop () {
 }
 
 int main() { 
+    setup_input();
     brush.transparent_white_spaces = false;
     brush.stage = 1;
     window.add_sprite_to_renderer(&brush);

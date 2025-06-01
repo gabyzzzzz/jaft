@@ -355,8 +355,8 @@ void Window::gml(function<void()> game_logic) {
 
 void Window::game_loop(function<void()> game_logic) {
     //Game loop-ul propriu-zis. Primeste ca parametru o functie de tip void care se va executa la fiecare game tick
-    gml(game_logic);
     thread input_thread(input, this);
+    gml(game_logic);
     input_thread.join();
 }
 
