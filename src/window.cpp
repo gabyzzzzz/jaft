@@ -336,7 +336,7 @@ void Window::input() {
 }
 
 void Window::gml(function<void()> game_logic) {
-    //Codul game loop-ului. Foloseste game_loop pentru multithreading (recomandat)
+    //Codul game loop-ului.
     using clock = chrono::high_resolution_clock;
     using duration = chrono::duration<double, milli>;
     double frame_time = 1000.0 / Config::FPS; 
@@ -355,10 +355,9 @@ void Window::gml(function<void()> game_logic) {
 
 void Window::game_loop(function<void()> game_logic) {
     //Game loop-ul propriu-zis. Primeste ca parametru o functie de tip void care se va executa la fiecare game tick
-    thread game_thread(gml, this, game_logic);
+    gml(game_logic);
     thread input_thread(input, this);
     input_thread.join();
-    game_thread.join();
 }
 
 unordered_set<char> Window::get_keys_pressed() {
