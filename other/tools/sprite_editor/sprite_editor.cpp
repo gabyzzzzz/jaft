@@ -45,42 +45,77 @@ bool saved = true;
 string crdir = "";
 string crfile = "";
 
+Sprite clipboard(2);
+
 //  ----------------------------------------------------------------------------
 
-//  Copy a block of caracthers to some coordonates passed by the arguments
-void chunk_copy(rectangle to_copy, unsigned int x_to_paste, unsigned int y_to_paste) {
+//  Commits change to undo_stack and clears vector
+void push_undo(vector<change>& mods) {
+    if (!mods.empty()) {
+        if (undo_stack.size() >= stack_limit) undo_stack.pop_back();
+        undo_stack.push_front(mods);
+        mods.clear();
+    }
+}
+
+//  Commits change to redo_stack and clears vector
+void push_redo(vector<change>& mods) {
+    if (!mods.empty()) {
+        if (redo_stack.size() >= stack_limit) redo_stack.pop_back();
+        redo_stack.push_front(mods);
+        mods.clear();
+    }
+}
+
+void copy_chunk_from_sprite(rectangle to_copy, unsigned int x_to_paste, unsigned int y_to_paste, Sprite* target, Sprite* source) {
     unsigned int ydiff = to_copy.y2 - to_copy.y1 + 1;
     unsigned int xdiff = to_copy.x2 - to_copy.x1 + 1;
-    unsigned int c_frame = canvas->current_frame;
-    for (unsigned int y = 0; y < ydiff; y++) {
-        for (unsigned int x = 0; x < xdiff; x++) {
+    unsigned int c_frame = target->current_frame;
+    vector<change> mods;
+    for (unsigned int y = 0; y < ydiff && y + y_to_paste < WINDOWHEIGHT; y++) {
+        for (unsigned int x = 0; x < xdiff && x + x_to_paste < WINDOWLENGTH; x++) {
             //char clr[21] = "\x1b[38;2;<r>;<g>;<b>m<char>";
-            char* c_str = window.buffer + ((y + to_copy.y1) * WINDOWLENGTH + (x + to_copy.x1)) * 20;
-            string r(c_str + 10, 3);
-            string g(c_str + 13, 3);
-            string b(c_str + 16, 3);
-            char c = c_str[20];
-            int red = stoi(r);
-            int green = stoi(g);
-            int blue = stoi(b);
-            canvas->sprite_frames[c_frame][y + y_to_paste][x + x_to_paste] = c;
-            canvas->r[c_frame][y + y_to_paste][x + x_to_paste] = red;
-            canvas->g[c_frame][y + y_to_paste][x + x_to_paste] = green;
-            canvas->b[c_frame][y + y_to_paste][x + x_to_paste] = blue;
+            change p1 = {
+                x + x_to_paste,
+                y + y_to_paste,
+                target->r[c_frame][y + y_to_paste][x + x_to_paste],
+                target->g[c_frame][y + y_to_paste][x + x_to_paste],
+                target->b[c_frame][y + y_to_paste][x + x_to_paste],
+                c_frame,
+                target->sprite_frames[c_frame][y + y_to_paste][x + x_to_paste]
+            };
+            mods.push_back(p1);
+            target->sprite_frames[c_frame][y + y_to_paste][x + x_to_paste] = source->sprite_frames[source->current_frame][y + to_copy.y1][x + to_copy.x1];
+            target->r[c_frame][y + y_to_paste][x + x_to_paste] = source->r[source->current_frame][y + to_copy.y1][x + to_copy.x1];
+            target->g[c_frame][y + y_to_paste][x + x_to_paste] = source->g[source->current_frame][y + to_copy.y1][x + to_copy.x1];
+            target->b[c_frame][y + y_to_paste][x + x_to_paste] = source->b[source->current_frame][y + to_copy.y1][x + to_copy.x1];
         }
     }
+    push_undo(mods);
 }
 
 //  Copy frames
 void f_copy(unsigned int frame_to_copy, unsigned int frame_to_paste) {
+    vector<change> mods;
     for (unsigned int y = 0; y < canvas->frame_height; y++) {
         for (unsigned int x = 0; x < canvas->frame_width; x++) {
+            change p1 = {
+                x,
+                y,
+                canvas->r[frame_to_paste][y][x],
+                canvas->g[frame_to_paste][y][x],
+                canvas->b[frame_to_paste][y][x],
+                frame_to_paste,
+                canvas->sprite_frames[frame_to_paste][y][x]
+            };
             canvas->sprite_frames[frame_to_paste][y][x] = canvas->sprite_frames[frame_to_copy][y][x];
             canvas->r[frame_to_paste][y][x] = canvas->r[frame_to_copy][y][x];
             canvas->g[frame_to_paste][y][x] = canvas->g[frame_to_copy][y][x];
             canvas->b[frame_to_paste][y][x] = canvas->b[frame_to_copy][y][x];
+            mods.push_back(p1);
         }
     }
+    push_undo(mods);
 }
 
 //  Undo
@@ -169,34 +204,34 @@ void save_to(string cnct) {
     saved = true;
 }
 
-rectangle get_drawing() {
-    unsigned int y_limit = canvas->frame_height, x_limit = canvas->frame_width;
-    unsigned int cf = canvas->current_frame;
+rectangle get_drawing(Sprite* source) {
+    unsigned int y_limit = source->frame_height, x_limit = source->frame_width;
+    unsigned int cf = source->current_frame;
     rectangle rt_val = {0, 0, 0, 0};
     for (unsigned int y = 0; y < y_limit; y++) 
     for (unsigned int x = 0; x < x_limit; x++) 
-    if (canvas->sprite_frames[cf][y][x] != ' ') {
+    if (source->sprite_frames[cf][y][x] != ' ') {
         rt_val.y1 = y;
         goto done1;
     }
     done1:
     for (unsigned int x = 0; x < x_limit; x++) 
     for (unsigned int y = 0; y < y_limit; y++) 
-    if (canvas->sprite_frames[cf][y][x] != ' ') {
+    if (source->sprite_frames[cf][y][x] != ' ') {
         rt_val.x1 = x;
         goto done2;
     }
     done2:
     for (int x = x_limit - 1; x >= 0; x--) 
     for (unsigned int y = 0; y < y_limit; y++) 
-    if (canvas->sprite_frames[cf][y][x] != ' ') {
+    if (source->sprite_frames[cf][y][x] != ' ') {
         rt_val.x2 = x;
         goto done3;
     } 
     done3:
     for (int y = y_limit - 1; y >= 0; y--) 
     for (unsigned int x = 0; x < x_limit; x++) 
-    if (canvas->sprite_frames[cf][y][x] != ' ') {
+    if (source->sprite_frames[cf][y][x] != ' ') {
         rt_val.y2 = y;
         goto done4;
     }
@@ -205,28 +240,28 @@ rectangle get_drawing() {
     return rt_val;
 }
 
-void new_canvas() {
-    canvas->sprite_frames = new char**[canvas->nr_of_frames];
-    canvas->r = new unsigned short int**[canvas->nr_of_frames];
-    canvas->g = new unsigned short int**[canvas->nr_of_frames];
-    canvas->b = new unsigned short int**[canvas->nr_of_frames];
-    for (unsigned int f = 0; f < canvas->nr_of_frames; f++) {
-        canvas->sprite_frames[f] = new char*[canvas->frame_height];
-        canvas->r[f] = new unsigned short int*[canvas->frame_height];
-        canvas->g[f] = new unsigned short int*[canvas->frame_height];
-        canvas->b[f] = new unsigned short int*[canvas->frame_height];
-        for (unsigned int h = 0; h < canvas->frame_height; h++) {
-            canvas->sprite_frames[f][h] = new char[canvas->frame_width + 1];
-            canvas->r[f][h] = new unsigned short int[canvas->frame_width];
-            canvas->g[f][h] = new unsigned short int[canvas->frame_width];
-            canvas->b[f][h] = new unsigned short int[canvas->frame_width];
-            for (unsigned int w = 0; w < canvas->frame_width; w++) {
-                canvas->sprite_frames[f][h][w] = ' ';
-                canvas->r[f][h][w] = 255;
-                canvas->g[f][h][w] = 255;
-                canvas->b[f][h][w] = 255;
+void sprite_init(Sprite* spr) {
+    spr->sprite_frames = new char**[spr->nr_of_frames];
+    spr->r = new unsigned short int**[spr->nr_of_frames];
+    spr->g = new unsigned short int**[spr->nr_of_frames];
+    spr->b = new unsigned short int**[spr->nr_of_frames];
+    for (unsigned int f = 0; f < spr->nr_of_frames; f++) {
+        spr->sprite_frames[f] = new char*[spr->frame_height];
+        spr->r[f] = new unsigned short int*[spr->frame_height];
+        spr->g[f] = new unsigned short int*[spr->frame_height];
+        spr->b[f] = new unsigned short int*[spr->frame_height];
+        for (unsigned int h = 0; h < spr->frame_height; h++) {
+            spr->sprite_frames[f][h] = new char[spr->frame_width + 1];
+            spr->r[f][h] = new unsigned short int[spr->frame_width];
+            spr->g[f][h] = new unsigned short int[spr->frame_width];
+            spr->b[f][h] = new unsigned short int[spr->frame_width];
+            for (unsigned int w = 0; w < spr->frame_width; w++) {
+                spr->sprite_frames[f][h][w] = ' ';
+                spr->r[f][h][w] = 255;
+                spr->g[f][h][w] = 255;
+                spr->b[f][h][w] = 255;
             }
-            canvas->sprite_frames[f][h][canvas->frame_width] = '\0';
+            spr->sprite_frames[f][h][spr->frame_width] = '\0';
         }
     }
 }
@@ -319,7 +354,7 @@ void get_command() {
                 canvas->frame_height = WINDOWHEIGHT;
                 canvas->frame_width = WINDOWLENGTH; 
             }
-            new_canvas();
+            sprite_init(canvas);
             cout << "[CONSOLE] Successfully created file.\n";
             crfile = tokens[1];
         }
@@ -373,18 +408,38 @@ void get_command() {
     }
 
     if (tokens[0] == "align") {
-        //  TODO IMPLEMENT UNDO / REDO HERE ALSO
-        rectangle to_copy = get_drawing();
+        rectangle to_copy = get_drawing(canvas);
+        vector<change> mods;
         unsigned int cf = canvas->current_frame;
-        for (int y = to_copy.y1; y <= to_copy.y2; y++) {
-            for (int x = to_copy.x1; x <= to_copy.x2; x++) {
+        for (unsigned int y = to_copy.y1; y <= to_copy.y2; y++) {
+            for (unsigned int x = to_copy.x1; x <= to_copy.x2; x++) {
+                change p1 = {
+                    x, 
+                    y, 
+                    canvas->r[cf][y][x], 
+                    canvas->g[cf][y][x], 
+                    canvas->b[cf][y][x], 
+                    cf, 
+                    canvas->sprite_frames[cf][y][x]
+                };
+                change p2 = {
+                    x - to_copy.x1, 
+                    y - to_copy.y1, 
+                    canvas->r[cf][y - to_copy.y1][x - to_copy.x1], 
+                    canvas->g[cf][y - to_copy.y1][x - to_copy.x1], 
+                    canvas->b[cf][y - to_copy.y1][x - to_copy.x1],
+                    cf,
+                    canvas->sprite_frames[cf][y][x]
+                };
                 canvas->sprite_frames[cf][y - to_copy.y1][x - to_copy.x1] = canvas->sprite_frames[cf][y][x];
                 canvas->r[cf][y - to_copy.y1][x - to_copy.x1] = canvas->r[cf][y][x];
                 canvas->g[cf][y - to_copy.y1][x - to_copy.x1] = canvas->g[cf][y][x];
                 canvas->b[cf][y - to_copy.y1][x - to_copy.x1] = canvas->b[cf][y][x];
                 canvas->sprite_frames[cf][y][x] = ' ';
+                mods.push_back(p1); mods.push_back(p2);
             }
         }
+        push_undo(mods);
         continue;
     }
 
@@ -470,7 +525,11 @@ bool left_mouse_down() {
 //  | LOOP |
 //   
 
+int s_mode = 0;
+rectangle selection;
+
 void loop () {
+    //  TODO - GET RID OF THE MOUSE CLICKS AT COPYING. ITS SLOWING THINGS DOWN. ALSO, IMPLEMENT THE CUT
     unordered_set<char> input = window.get_keys_pressed();
     
     //  Handle brush movement to follow mouse
@@ -481,40 +540,113 @@ void loop () {
         brush.x = x;
         brush.y = y;
     }
-
+    //  If selection mode active, handle coords
+    if (s_mode) {
+        selection.x2 = brush.x;
+        selection.y2 = brush.y;
+    }
     //  Handle commands
-    if (input.count('c')) get_command();
+    if (input.count('q')) get_command();
     if (input.count('z')) undo();
     if (input.count('y')) redo();
 
+    if (input.count('c')) {
+        if (s_mode) {
+            brush.visible = true;
+            rectangle cpy = {
+                min(selection.x1, selection.x2), 
+                min(selection.y1, selection.y2), 
+                max(selection.x1, selection.x2), 
+                max(selection.y1, selection.y2)
+            };
+            //  Empty clipboard
+            for (int y = 0; y < WINDOWHEIGHT; y++) 
+            for (int x = 0; x < WINDOWLENGTH; x++) 
+            clipboard.sprite_frames[0][y][x] = ' ';
+            //  Copy chunk
+            copy_chunk_from_sprite(cpy, 0, 0, &clipboard, canvas);
+            //  Delete chars from canvas if is in cut mode
+            if (s_mode == 2) {
+                vector<change> mods;
+                for (unsigned y = cpy.y1; y <= cpy.y2; y++) 
+                for (unsigned x = cpy.x1; x <= cpy.x2; x++) {
+                    change p1 = {x, y, 
+                        canvas->r[canvas->current_frame][y][x],
+                        canvas->g[canvas->current_frame][y][x],
+                        canvas->b[canvas->current_frame][y][x],
+                        canvas->current_frame, 
+                        canvas->sprite_frames[canvas->current_frame][y][x]
+                    };
+                    canvas->sprite_frames[canvas->current_frame][y][x] = ' ';
+                    mods.push_back(p1);
+                }
+                Sleep(1000);
+                push_undo(mods);
+            }
+            //  Turn off selection mode
+            s_mode = 0;
+        } else {
+            brush.visible = false;
+            s_mode = 1;
+            selection = {brush.x, brush.y, brush.x, brush.y};
+        }
+    }
+
+    if (input.count('x')) {
+        s_mode = 2;
+        selection = {brush.x, brush.y, brush.x, brush.y};
+    }
+
+    if (input.count('p')) {
+        rectangle to_copy = get_drawing(&clipboard);
+        copy_chunk_from_sprite(to_copy, brush.x, brush.y, canvas, &clipboard);
+    }
+
     //  On click
-    if (left_mouse_down()) {
-        if (brush.visible) {
-            redo_stack.clear();
+    if (left_mouse_down() && brush.visible && !s_mode) {
+        //  Clear stack
+        redo_stack.clear();
+        unsigned int c_frame = canvas->current_frame;
+        //  Register changes
+        change current_change = {brush.x, brush.y, 
+        canvas->r[c_frame][brush.y][brush.x],
+        canvas->g[c_frame][brush.y][brush.x],
+        canvas->b[c_frame][brush.y][brush.x],
+        c_frame, 
+        canvas->sprite_frames[c_frame][brush.y][brush.x]};
+        change tmp;
+        if (!changes.empty()) tmp = changes[changes.size() - 1];
 
-            unsigned int c_frame = canvas->current_frame;
-            change current_change = {brush.x, brush.y, 
-            canvas->r[c_frame][brush.y][brush.x],
-            canvas->g[c_frame][brush.y][brush.x],
-            canvas->b[c_frame][brush.y][brush.x],
-            c_frame, 
-            canvas->sprite_frames[c_frame][brush.y][brush.x]};
-            change tmp;
-            if (!changes.empty()) tmp = changes[changes.size() - 1];
+        //  Write and push changes
+        if (changes.empty() || tmp.x != current_change.x || tmp.y != current_change.y) {
+            changes.push_back(current_change);
+            canvas->sprite_frames[c_frame][brush.y][brush.x] = brush.sprite_frames[0][0][0];
+            canvas->r[c_frame][brush.y][brush.x] = brush.r[0][0][0];
+            canvas->g[c_frame][brush.y][brush.x] = brush.g[0][0][0];
+            canvas->b[c_frame][brush.y][brush.x] = brush.b[0][0][0];
+            saved = false;
+        }
+    } 
+    else if (!s_mode && brush.visible) push_undo(changes);
 
-            if (changes.empty() || tmp.x != current_change.x || tmp.y != current_change.y) {
-                changes.push_back(current_change);
-                canvas->sprite_frames[c_frame][brush.y][brush.x] = brush.sprite_frames[0][0][0];
-                canvas->r[c_frame][brush.y][brush.x] = brush.r[0][0][0];
-                canvas->g[c_frame][brush.y][brush.x] = brush.g[0][0][0];
-                canvas->b[c_frame][brush.y][brush.x] = brush.b[0][0][0];
-                saved = false;
+    //  Mark rectangle selected
+    if (s_mode) {
+        rectangle tmp = {
+            min(selection.x1, selection.x2), 
+            min(selection.y1, selection.y2), 
+            max(selection.x1, selection.x2), 
+            max(selection.y1, selection.y2)
+        };
+        for (unsigned int y = tmp.y1; y <= tmp.y2; y++) {
+            for (unsigned int x = tmp.x1; x <= tmp.x2; x++) {
+                char* c_str = window.buffer + (y * (WINDOWLENGTH + 1) + x) * 20;
+                //char clr[21] = "\x1b[38;2;<r>;<g>;<b>m<char>";
+                c_str[19] = '.';
+                memcpy(c_str + 7,  "57", 3);
+                memcpy(c_str + 11, "57", 3);
+                memcpy(c_str + 15, "57", 3);
             }
         }
-    } else if (!changes.empty()) {
-        if (undo_stack.size() >= stack_limit) undo_stack.pop_back();
-        undo_stack.push_front(changes);
-        changes.clear();
     }
 
     window.empty_keys_pressed();
@@ -540,6 +672,11 @@ int main() {
     //  Setup
     brush.transparent_white_spaces = false;
     brush.stage = 1;
+    clipboard.nr_of_frames = 1;
+    clipboard.frame_height = WINDOWHEIGHT;
+    clipboard.frame_width = WINDOWLENGTH;
+    clipboard.visible = false;
+    sprite_init(&clipboard);
     window.add_sprite_to_renderer(&brush);
     get_command();
     window.game_loop(loop);

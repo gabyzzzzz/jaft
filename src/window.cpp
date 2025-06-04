@@ -342,8 +342,8 @@ void Window::gml(function<void()> game_logic) {
     double frame_time = 1000.0 / Config::FPS; 
     while (Game::running) {
         auto frame_start = clock::now();
-        game_logic();
         update_buffer_from_renderer();
+        game_logic();
         print_buffer();
         reset_cursor();
         auto frame_end = clock::now();
