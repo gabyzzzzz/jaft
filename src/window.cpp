@@ -17,9 +17,22 @@ namespace Config {
 };
 
 bool compare(Sprite* s1, Sprite* s2) {
-    return (s1->stage < s2->stage);
+    return (s1->view.stage < s2->view.stage);
 }
 
+//  Gets a color of numeric value into string, ready to add to the buffer
+string num_to_color(int clr) {
+    //  Cut if more than 256
+    while (clr > 256) clr /= 10;
+    //  Build the string
+    string out = "";
+    if (clr > 99) out += to_string(clr);
+    else if (clr > 9) out += "0" + to_string(clr);
+    else out += "00" + to_string(clr);
+    return out;
+}
+
+//  TODO - CLEAN UP THESE CONFIG FUNCTIONS - THEY USE THE SAME DAMNN HANDLE
 void fix_console_size() {
     //Config
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -98,7 +111,6 @@ void hide_console_cursor() {
     SetConsoleCursorInfo(hConsole, &cursorInfo);
 }
 
-
 void maximize_console() {
     //Config
     HWND hwnd = GetConsoleWindow();
@@ -125,7 +137,7 @@ void Window::config() {
     //Reading from settings json
     ifstream conf("settings.json");
     json settings;
-    screen_height = GetSystemMetrics(SM_CYFULLSCREEN); screen_width = GetSystemMetrics(SM_CXFULLSCREEN);
+    screen_size.y = GetSystemMetrics(SM_CYFULLSCREEN); screen_size.x = GetSystemMetrics(SM_CXFULLSCREEN);
     if (!(conf.is_open()) || !(conf >> settings)) {
         if (!(conf.is_open())) lg << "[CONSOLE] Didn't find settings.json. Creating file...\n";
         conf.close();
@@ -176,8 +188,8 @@ Window::Window() {
     }
     ios_base::sync_with_stdio(false);
     config();
-    unsigned int font_h = round((double) screen_height / FONT_RATIO_HEIGHT);
-    unsigned int font_w = round((double) screen_width / FONT_RATIO_LENGTH);
+    unsigned int font_h = round((double) screen_size.y / FONT_RATIO_HEIGHT);
+    unsigned int font_w = round((double) screen_size.x / FONT_RATIO_LENGTH);
     set_font_settings(font_h, font_w);
     hide_console_cursor();
     maximize_console();
@@ -201,8 +213,8 @@ void Window::set_font_settings(unsigned int f_height, unsigned int f_width) {
     cfi.dwFontSize.Y = f_height;
     wcscpy(cfi.FaceName, L"Cascadia Mono");
     if (!SetCurrentConsoleFontEx(hConsole, TRUE, &cfi)) log(201);
-    font_size_height = f_height;
-    font_size_width = f_width;
+    font_size.y = f_height;
+    font_size.x = f_width;
 }
 
 void Window::clean_renderer() {
@@ -275,39 +287,33 @@ void Window::remove_sprites_from_renderer(function<bool(Sprite*)> condition) {
     clean_renderer();
 }
 
+//  Da load la sprite-uri in buffer
 void Window::update_buffer_from_renderer() {
-    //Da load la sprite-uri in buffer
     unsigned int i = 0;
+    //  Sort by scene number
     sort(renderer, renderer + nr_of_sprites_in_renderer, compare);
     empty_buffer();
+    POINT_e current_s;
+    //  Iterates trough every sprite
     while (i < nr_of_sprites_in_renderer && renderer[i] != nullptr) {
         Sprite* current_sprite = renderer[i];
-        if(current_sprite->visible) {
-            unsigned int fh = current_sprite->frame_height;
-            unsigned int fw = current_sprite->frame_width;
-            for (unsigned int h = 0; h < fh; h++) {
-                if (!(h + current_sprite->y < WINDOWHEIGHT)) continue;
-                for (unsigned int w = 0; w < fw; w++) {
-                    if (!(w + current_sprite->x < WINDOWLENGTH)) continue;
-                    unsigned int cr_frame = current_sprite->current_frame;
-                    if (!current_sprite->transparent_white_spaces || current_sprite->sprite_frames[cr_frame][h][w] != ' ') {
-                        //char clr[21] = "\x1b[38;2;<r>;<g>;<b>m<char>";
-                        string clr = "\x1b[38;2;"; 
-                        if (current_sprite->r[cr_frame][h][w] > 99) clr += to_string(current_sprite->r[cr_frame][h][w]) + ";";
-                        else if (current_sprite->r[cr_frame][h][w] > 9) clr += "0" + to_string(current_sprite->r[cr_frame][h][w]) + ";";
-                        else clr += "00" + to_string(current_sprite->r[cr_frame][h][w]) + ";";
-                        if (current_sprite->g[cr_frame][h][w] > 99) clr += to_string(current_sprite->g[cr_frame][h][w]) + ";";
-                        else if (current_sprite->g[cr_frame][h][w] > 9) clr += "0" + to_string(current_sprite->g[cr_frame][h][w]) + ";";
-                        else clr += "00" + to_string(current_sprite->g[cr_frame][h][w]) + ";";
-                        if (current_sprite->b[cr_frame][h][w] > 99) clr += to_string(current_sprite->b[cr_frame][h][w]) + "m";
-                        else if (current_sprite->b[cr_frame][h][w] > 9) clr += "0" + to_string(current_sprite->b[cr_frame][h][w]) + "m";
-                        else clr += "00" + to_string(current_sprite->b[cr_frame][h][w]) + "m";
-                        clr += current_sprite->sprite_frames[cr_frame][h][w];
-                        char clr_char[21] = {0};
-                        strncpy(clr_char, clr.c_str(), clr.size());
-                        stringcpy(buffer + ((h + current_sprite->y) * (WINDOWLENGTH + 1) * 20 +  (w + current_sprite->x) * 20), clr_char);
-                    }
-                }
+        //  If invisible, continue
+        if(!current_sprite->view.visible) { i++; continue; }
+        POINT_e fs = {current_sprite->frame_size.x, current_sprite->frame_size.y};
+        unsigned int cr_frame = current_sprite->animation.current_frame;
+        for (unsigned int h = 0; h < fs.y; h++) {
+            current_s.y = h + current_sprite->coords.y;
+            for (unsigned int w = 0; w < fs.x && current_s.y < WINDOWHEIGHT; w++) {
+                current_s.x = w + current_sprite->coords.x;
+                if (current_s.x >= WINDOWLENGTH) continue;
+                if (current_sprite->view.transparent_white_spaces && current_sprite->frames[cr_frame][h][w].character == ' ') continue;
+                //char clr[21] = "\x1b[38;2;<r>;<g>;<b>m<char>";
+                CELL current_cell = current_sprite->frames[cr_frame][h][w];
+                string clr = "\x1b[38;2;"; 
+                clr += num_to_color(current_cell.color.r) + ';' + num_to_color(current_cell.color.g) + ';' + num_to_color(current_cell.color.b) + 'm' + current_cell.character;
+                char clr_char[21] = {0};
+                strncpy(clr_char, clr.c_str(), clr.size());
+                stringcpy(buffer + ((h + current_sprite->coords.y) * (WINDOWLENGTH + 1) * 20 +  (w + current_sprite->coords.x) * 20), clr_char);
             }
         }
         i++;

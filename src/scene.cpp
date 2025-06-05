@@ -20,13 +20,13 @@ void Scene::clean() {
 void Scene::hide_scene() {
     //Face fiecare sprite din scena invizibil
     for (unsigned int i = 0; i < nr_of_sprites; i++)
-        sprites[i]->visible = false;
+        sprites[i]->view.visible = false;
 }
 
 void Scene::show_scene() {
     //Face fiecare sprite din scena vizibil
     for (unsigned int i = 0; i < nr_of_sprites; i++)
-        sprites[i]->visible = true;
+        sprites[i]->view.visible = true;
 }
 
 void Scene::add_sprite(Sprite* sprite) {

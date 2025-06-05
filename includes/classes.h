@@ -3,21 +3,40 @@
 #include "defines.h"
 #include "libraries.h"
 
-void log(int err_code, int sprite_label = 0);
+void log(int err_code, int sprite_label = -1);
+
+struct COLOR {
+    unsigned short int r, g, b;
+};
+
+struct POINT_e {
+    unsigned int x = 0, y = 0;
+};
+
+struct CELL {
+    COLOR color;
+    char character; 
+};
+
+struct VIEW {
+    bool visible = true;
+    bool transparent_white_spaces = true;
+    unsigned int stage = 0;
+};
+
+struct ANIMATION {
+    bool is_animation_active = false; 
+    unsigned int nr_of_frames = 0, current_frame = 0, ticks_per_frame = 1, current_tick = 0;
+};
 
 class Sprite
 {
 public:
-    bool visible = true, is_animation_active = false, transparent_white_spaces = true;
-    unsigned int x = 0, y = 0;
-    unsigned int frame_height = 0, frame_width = 0;
-    unsigned int stage = 0;
-    unsigned int nr_of_frames = 0, current_frame = 0, ticks_per_frame = 1, current_tick = 0;
+    POINT_e coords, frame_size;
+    VIEW view;
+    ANIMATION animation;
     unsigned int label = 0;
-    char*** sprite_frames = nullptr;
-    unsigned short int*** r = nullptr;
-    unsigned short int*** g = nullptr;
-    unsigned short int*** b = nullptr;
+    CELL*** frames = nullptr;
 
     void DEBUG_sprite(); // A bit outdated
 
@@ -27,6 +46,7 @@ public:
 
     void init_by_file(const char file_name[]);
     Sprite(unsigned int lbl);
+    void sprite_init();
     Sprite();
     Sprite(const char file_name[], unsigned int lbl);
     ~Sprite();
@@ -65,9 +85,9 @@ class Window
 private:
     const unsigned int total_buffer_size = WINDOWHEIGHT * (WINDOWLENGTH + 1) * 20;
 public:
-    unsigned int screen_height, screen_width;
+    POINT_e screen_size;
     unsigned int nr_of_sprites_in_renderer = 0;
-    double font_size_height, font_size_width;
+    POINT_e font_size;
     char buffer[WINDOWHEIGHT * (WINDOWLENGTH + 1) * 20];
     Sprite* renderer[MAXNROFSPRITES];
 
