@@ -2,3 +2,4 @@
 log.txt
 *.json
 .vscode/
+build/*.spr
