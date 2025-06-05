@@ -1,5 +1,5 @@
 *.exe
 log.txt
-*.json
+build/*.json
 .vscode/
 build/*.spr
