@@ -191,7 +191,6 @@ Window::Window() {
     unsigned int font_h = round((double) screen_size.y / FONT_RATIO_HEIGHT);
     unsigned int font_w = round((double) screen_size.x / FONT_RATIO_LENGTH);
     set_font_settings(font_h, font_w);
-    hide_console_cursor();
     maximize_console();
     disable_console_resize();
     disable_console_scroll();
@@ -199,6 +198,7 @@ Window::Window() {
     fix_zoom();
     enable_virtual_terminal();
     empty_buffer();
+    hide_console_cursor();
 }
 
 void Window::set_font_settings(unsigned int f_height, unsigned int f_width) {
