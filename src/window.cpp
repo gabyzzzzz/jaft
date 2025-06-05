@@ -337,7 +337,7 @@ void Window::input() {
             lock_guard<mutex> lock(Game::key_mutex);
             Game::keys_down.insert(ch);
         }
-        this_thread::sleep_for(chrono::milliseconds(1));
+        this_thread::sleep_for(chrono::milliseconds(5));
     }
 }
 
