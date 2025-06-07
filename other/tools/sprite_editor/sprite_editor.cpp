@@ -28,7 +28,7 @@ struct change {
 vector<change> changes;
 deque<vector<change>> undo_stack, redo_stack; 
 
-const double FONT_WIDTH_MULTIPLIER = 2.35;
+const double FONT_WIDTH_MULTIPLIER = 2.1; //   FONTHEIGHT / FONTWIDTH
 
 //  P( x2, y1 ) -> Upper right corner
 //  P( x1, y2 ) -> lower left corner
@@ -380,6 +380,11 @@ void get_command() {
         continue;
     }
 
+    if (tokens[0] == "screensize") {
+        cout << window.screen_size.y << ' ' << window.screen_size.x << '\n';
+        continue;
+    }
+
     if (tokens[0] == "copyframe") {
         if (tokens.size() < 2) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
         f_copy(stoi(tokens[1]), canvas->animation.current_frame);
@@ -450,8 +455,8 @@ void loop () {
     
     //  Handle brush movement to follow mouse
     GetCursorPos(&p);
-    unsigned int x = (double)p.x / ((double) window.screen_size.x / FONT_RATIO_LENGTH) * FONT_WIDTH_MULTIPLIER;
-    unsigned int y = (double)p.y / ((double) window.screen_size.y / FONT_RATIO_HEIGHT);
+    unsigned int x = (double)p.x / ((double) window.screen_size.y / FONT_RATIO_HEIGHT) * FONT_WIDTH_MULTIPLIER;
+    unsigned int y = ((double)p.y / ((double) window.screen_size.x / FONT_RATIO_LENGTH)) - 1;
     if (canvas->frame_size.y > y && canvas->frame_size.x > x) {
         brush.coords.x = x;
         brush.coords.y = y;
