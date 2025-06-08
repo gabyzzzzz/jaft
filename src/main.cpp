@@ -5,6 +5,9 @@
 using namespace std;
 
 int main() { 
-
+    Window window;
+    window.DEBUG_fill();
+    
+    cin.get();
     return 0;
 }

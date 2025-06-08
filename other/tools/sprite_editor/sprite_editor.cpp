@@ -28,7 +28,7 @@ struct change {
 vector<change> changes;
 deque<vector<change>> undo_stack, redo_stack; 
 
-const double FONT_WIDTH_MULTIPLIER = 2.1; //   FONTHEIGHT / FONTWIDTH
+const double FONT_WIDTH_MULTIPLIER = 2.295; //   FONTHEIGHT / FONTWIDTH
 
 //  P( x2, y1 ) -> Upper right corner
 //  P( x1, y2 ) -> lower left corner
@@ -456,7 +456,7 @@ void loop () {
     //  Handle brush movement to follow mouse
     GetCursorPos(&p);
     unsigned int x = (double)p.x / ((double) window.screen_size.y / FONT_RATIO_HEIGHT) * FONT_WIDTH_MULTIPLIER;
-    unsigned int y = ((double)p.y / ((double) window.screen_size.x / FONT_RATIO_LENGTH)) - 1;
+    unsigned int y = round((double)p.y / ((double) window.screen_size.x / FONT_RATIO_LENGTH));
     if (canvas->frame_size.y > y && canvas->frame_size.x > x) {
         brush.coords.x = x;
         brush.coords.y = y;
