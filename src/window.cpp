@@ -6,6 +6,9 @@
 using json = nlohmann::json;
 ofstream lg("log.txt", ios::app);
 
+char space[] = "\x1b[38;2;255;000;000m \0";
+char nlchar[] = "\x1b[38;2;255;000;000m\n\0";
+
 namespace Game {
     bool running = true;
     unordered_set<char> keys_down;
@@ -65,6 +68,7 @@ void disable_text_selection() {
 }
 
 void enable_virtual_terminal() {
+    //Config
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD dwMode = 0;
     GetConsoleMode(hOut, &dwMode);
@@ -72,11 +76,8 @@ void enable_virtual_terminal() {
     SetConsoleMode(hOut, dwMode);
 }
 
-void reset_cursor() {
-    //Config
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    COORD topLeft = { 0, 0 };
-    SetConsoleCursorPosition(hConsole, topLeft);
+inline void reset_cursor() {
+    write(1, "\x1b[H", 3);
 }
 
 void disable_console_scroll() {
@@ -155,9 +156,7 @@ void Window::config() {
     conf.close();
 }
 
-void Window::empty_buffer() {
-    char space[] = "\x1b[38;2;255;000;000m \0";
-    char nlchar[] = "\x1b[38;2;255;000;000m\n\0";
+inline void Window::empty_buffer() {
     for (int i = 0; i < WINDOWHEIGHT; i++) {
         for (int j = 0; j < WINDOWLENGTH; j++) 
             stringcpy(buffer + (i * (WINDOWLENGTH + 1) * 20 + j * 20), space);
@@ -174,9 +173,9 @@ void Window::DEBUG_fill() {
     cout.flush();
 }
 
-void Window::print_buffer() {
-    //Prints buffer with fwrite and flushes 
-    fwrite(buffer, 1, total_buffer_size, stdout);
+inline void Window::print_buffer() {
+    //Prints buffer
+    write(1, buffer, total_buffer_size);
 }  
 
 Window::Window() {
@@ -246,6 +245,7 @@ void Window::add_sprite_to_renderer(Sprite* s1) {
     if (i == MAXNROFSPRITES) log(809, s1->label);
     renderer[i] = s1;
     nr_of_sprites_in_renderer++;
+    sort(renderer, renderer + nr_of_sprites_in_renderer, compare);
 }
 
 void Window::add_sprites_to_renderer(Sprite** s1, unsigned int sz) {
@@ -259,6 +259,7 @@ void Window::add_sprites_to_renderer(Sprite** s1, unsigned int sz) {
         renderer[i] = s1[i - nr_of_sprites_in_renderer];
     }
     nr_of_sprites_in_renderer += sz;
+    sort(renderer, renderer + nr_of_sprites_in_renderer, compare);
 }
 
 void Window::remove_sprites_from_renderer(Sprite** s1, unsigned int sz) {
@@ -274,6 +275,7 @@ void Window::remove_sprites_from_renderer(Sprite** s1, unsigned int sz) {
         }
     }
     clean_renderer();
+    sort(renderer, renderer + nr_of_sprites_in_renderer, compare);
 }
 
 void Window::remove_sprites_from_renderer(function<bool(Sprite*)> condition) {
@@ -285,13 +287,13 @@ void Window::remove_sprites_from_renderer(function<bool(Sprite*)> condition) {
         }
     }
     clean_renderer();
+    sort(renderer, renderer + nr_of_sprites_in_renderer, compare);
 }
 
 //  Da load la sprite-uri in buffer
 void Window::update_buffer_from_renderer() {
     unsigned int i = 0;
     //  Sort by scene number
-    sort(renderer, renderer + nr_of_sprites_in_renderer, compare);
     empty_buffer();
     POINT_e current_s;
     //  Iterates trough every sprite
@@ -328,6 +330,7 @@ void Window::remove_sprite_from_renderer(Sprite* sprite) {
             break;
         }
     clean_renderer();
+    sort(renderer, renderer + nr_of_sprites_in_renderer, compare);
 }
 
 void Window::input() {
@@ -363,7 +366,6 @@ void Window::game_loop(function<void()> game_logic) {
     //Game loop-ul propriu-zis. Primeste ca parametru o functie de tip void care se va executa la fiecare game tick
     thread input_thread(input, this);
     gml(game_logic);
-    input_thread.join();
 }
 
 unordered_set<char> Window::get_keys_pressed() {

@@ -16,5 +16,8 @@
 #include <cstring>
 #include <unordered_set>
 #include <sstream>
+#include <io.h>
+#include <fcntl.h>
+
 
 using namespace std;
