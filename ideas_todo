@@ -1,7 +1,0 @@
--For more control, creating a custom GUI window would be a nice upgrade (why? - Mihai)
--Detecting sprite colosion
--Getting input without cin (why? we can just remove the sync with stdio, add a line to the int main
-// ios::sync_with_stdio(false);
- - Mihai)
--Clearing the console for new frames
--Finishing writing the code for the renderer + buffer in Window
