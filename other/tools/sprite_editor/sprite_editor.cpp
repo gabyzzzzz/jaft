@@ -11,6 +11,7 @@
 #include "../includes/classes.h"
 #include <vector>
 #include <deque>
+#include <iostream>
 
 using namespace std;
 
@@ -28,6 +29,7 @@ vector<change> changes;
 deque<vector<change>> undo_stack, redo_stack; 
 
 const double FONT_WIDTH_MULTIPLIER = 2.295; //   FONTHEIGHT / FONTWIDTH
+const double FONT_HEIGHT_MULTIPLIER = 0.98;
 
 //  P( x2, y1 ) -> Upper right corner
 //  P( x1, y2 ) -> lower left corner
@@ -53,6 +55,10 @@ string pallete_dir;
 
 //   _______________________
 //  | FUNCTIONS / UTILITIES |
+
+inline void reset_color() {
+    cout << "\x1b[38;2;255;255;255m" << flush;
+}
 
 //  Commits change to undo_stack and clears vector
 void push_undo(vector<change>& mods) {
@@ -89,6 +95,7 @@ void copy_chunk_from_sprite(rectangle to_copy, unsigned int x_to_paste, unsigned
         }
     }
     push_undo(mods);
+    canvas->refresh();
 }
 
 //  Copy frames
@@ -104,6 +111,7 @@ void f_copy(unsigned int frame_to_copy, unsigned int frame_to_paste) {
         }
     }
     push_undo(mods);
+    canvas->refresh();
 }
 
 //  Undo
@@ -127,6 +135,7 @@ void undo() {
     if (redo_stack.size() >= stack_limit) redo_stack.pop_back();
     redo_stack.push_front(red);
     undo_stack.pop_front();
+    canvas->refresh();
 }
 
 //  Redo
@@ -150,6 +159,7 @@ void redo () {
     if (undo_stack.size() >= stack_limit) undo_stack.pop_back();
     undo_stack.push_front(und);
     redo_stack.pop_front();
+    canvas->refresh();
 }
 
 //  Divides input into tokens separated by spaces
@@ -164,8 +174,7 @@ vector<string> tokenize_input(string input) {
         } else if (isprint(input[i])) t += input[i];
     }
     if (!t.empty()) ret_val.push_back(t);
-    if (!ret_val.empty()) return ret_val;
-    else return {""};
+    return ret_val;
 }
 
 //  Saves the contents of the file to a file specified in the arguments
@@ -181,10 +190,12 @@ void save_to(string cnct) {
         out << canvas->get_srenderer().pallete[i].g << ' ';
         out << canvas->get_srenderer().pallete[i].b << ' ';
     }
-    for (int i = 0; i < canvas->frame_size.y; i++) {
-        for (int j = 0; j < canvas->frame_size.x; j++) {
-            out << canvas->frames[i][j]->color_id << ' ';
-            out << canvas->frames[i][j]->character << ' ';
+    for (int f = 0; f < canvas->get_animation().nr_of_frames; f++) {
+        for (int i = 0; i < canvas->frame_size.y; i++) {
+            for (int j = 0; j < canvas->frame_size.x; j++) {
+                out << canvas->frames[f][i][j].color_id << ' ';
+                out << (int) canvas->frames[f][i][j].character << ' ';
+            }
         }
     }
     out.flush();
@@ -230,26 +241,21 @@ bool confirm_unsaved() {
 
 //  Main loop on cli
 void get_command() {
-
-    window.clear_screen();
-    window.print_buffer();
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    COORD topLeft = { 0, 0 };
-    SetConsoleCursorPosition(hConsole, topLeft);
+    //  Clear screen, reset cursor and color
+    cout << "\x1b[2J\x1b[H" << flush; 
+    reset_color();
     window.set_font_settings(15, 15);
-    cout << "\x1b[38;2;255;255;255m";
 
     string input;
     vector<string> tokens;
 
     do {
-    // Handle console input
+    //  Handle console input
     cout << "> ";
     getline(cin, input);
     tokens = tokenize_input(input);
+    if (tokens.size() < 1) continue;
 
-    if (tokens.size() == 0) continue;
-    
     //  Identify and execute command
     if (tokens[0] == "open") {
         //  Opening file
@@ -272,6 +278,7 @@ void get_command() {
                 canvas = new Sprite(file_name, 1);
                 cout << "[SPRITE_EDITOR] Successfully opened file.\n";
                 crfile = tokens[1];
+                canvas->refresh();
                 in.close();
             }
         }
@@ -302,6 +309,7 @@ void get_command() {
                 canvas->frame_size.y = WINDOWHEIGHT;
                 canvas->frame_size.x = WINDOWLENGTH; 
             }
+            canvas->set_stage(0);
             canvas->sprite_init();
             cout << "[SPRITE_EDITOR] Successfully created file.\n";
             crfile = tokens[1];
@@ -328,17 +336,19 @@ void get_command() {
         if (tokens.size() < 2) { cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
         if (tokens[1] == "32") brush.frames[0][0][0].character = ' ';
         else brush.frames[0][0][0].character = tokens[1][0];
+        brush.refresh();
         continue;
     }
 
     if (tokens[0] == "color") {
-        if (tokens.size() < 4) { cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
-        COLOR& current_color = brush.get_srenderer().pallete[brush.frames[0][0][0].color_id];
-        current_color.r = stoi(tokens[1]);
-        current_color.g = stoi(tokens[2]);
-        current_color.b = stoi(tokens[3]);
-        if (current_color.r > 256 || current_color.g > 256 || current_color.b > 256) 
-        cout << "[SPRITE_EDITOR] Invalid rgb code.\n";
+        if (tokens.size() < 2) { cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
+        int set_color_id = stoi(tokens[1]);
+        if (set_color_id < 0 || set_color_id > MAXNROFCOLORS) {
+            cout << "[SPRITE_EDITOR] Invalid argument! color_id must be an integer with a value between 0 and " << MAXNROFCOLORS << ".\n";
+            continue;
+        }
+        brush.frames[0][0][0].color_id = set_color_id;
+        brush.refresh();
         continue;
     }
 
@@ -351,28 +361,54 @@ void get_command() {
 
     if (tokens[0] == "setframe") {
         if (tokens.size() < 2) { cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
-        unsigned int cf = canvas->get_animation().current_frame;
-        cf = stoi(tokens[1]);
-        if (cf >= canvas->get_animation().nr_of_frames) cf = 0;
+        unsigned int cf = stoi(tokens[1]);
+        if (cf >= canvas->get_animation().nr_of_frames) canvas->set_current_frame(0);
+        else canvas->set_current_frame(cf);
         continue;
     }
 
     if (tokens[0] == "align") {
         rectangle to_copy = get_drawing(canvas);
-        vector<change> mods;
         unsigned int cf = canvas->get_animation().current_frame;
-        for (unsigned int y = to_copy.y1; y <= to_copy.y2; y++) {
-            for (unsigned int x = to_copy.x1; x <= to_copy.x2; x++) {
-                POINT_e p = {x, y};
-                POINT_e _p = {x - to_copy.x1, y - to_copy.y1};
-                change p1 = { p, canvas->frames[cf][y][x], cf };
-                change p2 = { _p, canvas->frames[cf][y + to_copy.y1][x + to_copy.x1], cf};
-                canvas->frames[cf][y - to_copy.y1][x - to_copy.x1] = canvas->frames[cf][y][x];
-                canvas->frames[cf][y][x].character = ' ';
-                mods.push_back(p1); mods.push_back(p2);
+        vector<change> mods;
+        vector<vector<CELL>> temp;
+        unsigned int width = 0, height = 0;
+        if (to_copy.x2 >= to_copy.x1 && to_copy.y2 >= to_copy.y1) {
+            width = to_copy.x2 - to_copy.x1 + 1;
+            height = to_copy.y2 - to_copy.y1 + 1;
+            temp.resize(height, vector<CELL>(width));
+            for (unsigned int y = 0; y < height; y++) {
+                for (unsigned int x = 0; x < width; x++) {
+                    temp[y][x] = canvas->frames[cf][to_copy.y1 + y][to_copy.x1 + x];
+                }
             }
         }
+
+        // Save all changes for undo
+        for (unsigned int y = 0; y < canvas->frame_size.y; y++) {
+            for (unsigned int x = 0; x < canvas->frame_size.x; x++) {
+                POINT_e p = {x, y};
+                change c = {p, canvas->frames[cf][y][x], cf};
+                mods.push_back(c);
+            }
+        }
+
+        // Clear the canvas
+        for (unsigned int y = 0; y < canvas->frame_size.y; y++) {
+            for (unsigned int x = 0; x < canvas->frame_size.x; x++) {
+                canvas->frames[cf][y][x].character = ' ';
+            }
+        }
+
+        // Copy the aligned region to the top-left
+        for (unsigned int y = 0; y < height; y++) {
+            for (unsigned int x = 0; x < width; x++) {
+                canvas->frames[cf][y][x] = temp[y][x];
+            }
+        }
+
         push_undo(mods);
+        canvas->refresh();
         continue;
     }
 
@@ -409,16 +445,18 @@ void get_command() {
 
     //  Shows existing colors to the console. 
     if (tokens[0] == "showcolors") {
-        for (int i = 0; i < brush.get_srenderer().nr_of_colors; i++) {
+        for (int i = 0; i < MAXNROFCOLORS; i++) {
             cout << "\x1b[38;2;";
-            cout << brush.get_srenderer().pallete[i].r << ';';
-            cout << brush.get_srenderer().pallete[i].g << ';';
-            cout << brush.get_srenderer().pallete[i].b << 'm';
-            cout << "[COLOR " << i + "] ";
-            cout << brush.get_srenderer().pallete[i].r << ' ';
-            cout << brush.get_srenderer().pallete[i].g << ' ';
-            cout << brush.get_srenderer().pallete[i].b << '\n';
+            cout << current_pallete[i].r << ';';
+            cout << current_pallete[i].g << ';';
+            cout << current_pallete[i].b << 'm';
+            cout << "[COLOR " << i << "] ";
+            cout << current_pallete[i].r << ' ';
+            cout << current_pallete[i].g << ' ';
+            cout << current_pallete[i].b << '\n';
         }
+        reset_color();
+        continue;
     }
 
     //  Sets a color from sprites pallete to input
@@ -439,21 +477,31 @@ void get_command() {
             stoi(tokens[3]),
             stoi(tokens[4])
         };
-        if (temp.r < 0 || temp.r > 256) {
+        if (temp.r < 0 || temp.r > 255) {
             cout << "[SPRITE_EDITOR] Invalid color!\n";
             cout << "[SPRITE_EDITOR] Every color value must be an integer lower than 257 and greater or equal to 0.\n";
             continue;
         }
-        brush.get_srenderer().pallete[color_id] = temp;
+        if (temp.g < 0 || temp.b > 255) {
+            cout << "[SPRITE_EDITOR] Invalid color!\n";
+            cout << "[SPRITE_EDITOR] Every color value must be an integer lower than 257 and greater or equal to 0.\n";
+            continue;
+        }
+        if (temp.b < 0 || temp.b > 255) {
+            cout << "[SPRITE_EDITOR] Invalid color!\n";
+            cout << "[SPRITE_EDITOR] Every color value must be an integer lower than 257 and greater or equal to 0.\n";
+            continue;
+        }
+        current_pallete[color_id] = temp;
         cout << "[SPRITE_EDITOR] Successfully set color no. " << color_id << " to: ";
         cout << "\x1b[38;2;";
-        cout << brush.get_srenderer().pallete[color_id].r << ';';
-        cout << brush.get_srenderer().pallete[color_id].g << ';';
-        cout << brush.get_srenderer().pallete[color_id].b << "m#\n";
+        cout << current_pallete[color_id].r << ';';
+        cout << current_pallete[color_id].g << ';';
+        cout << current_pallete[color_id].b << "m#\n";
+        reset_color();
         continue;
     }
 
-    //  Checks if file exists and empties current pallete
     if (tokens[0] == "createpallete") {
         if (tokens.size() < 2) {
             cout << "[SPRITE_EDITOR] Not enough arguments!\n";
@@ -488,20 +536,54 @@ void get_command() {
             cout << "[SPRITE_EDITOR] Nr of colors must be a integer lower than " << MAXNROFCOLORS << "and greater or equal than 0.";
             continue;
         }
-        ofstream out(pallete_dir);
+        string save_path = pallete_dir.empty() ? (crdir + "pallete.txt") : pallete_dir;
+        ofstream out(save_path);
         if (!out.is_open()) {
-            cout << "[SPRITE_EDITOR] Couldn't open file " << crdir + tokens[1] << '\n';
+            cout << "[SPRITE_EDITOR] Couldn't open file " << save_path << '\n';
             continue;
         }
         out << pallete_size << ' ';
         for (int i = 0; i < pallete_size; i++) {
-            cout << current_pallete[i].r << ' ';
-            cout << current_pallete[i].g << ' ';
-            cout << current_pallete[i].b << ' ';
+            out << current_pallete[i].r << ' ';
+            out << current_pallete[i].g << ' ';
+            out << current_pallete[i].b << ' ';
         }
-        cout << "[SPRITE_EDITOR] Pallete was successfully saved at " << crdir + tokens[1] << '\n';
+        cout << "[SPRITE_EDITOR] Pallete was successfully saved at " << save_path << '\n';
         continue;
     }
+
+    if (tokens[0] == "loadpallete") {
+        if (tokens.size() < 2) {
+            cout << "[SPRITE_EDITOR] Not enough arguments!\n";
+            cout << "[SPRITE_EDITOR] Arguments for loadpallete are: name\n";
+            continue;
+        }
+        ifstream in(crdir + tokens[1]);
+        if (!in.is_open()) {
+            cout << "[SPRITE_EDITOR] Couldn't open file " << crdir + tokens[1] << '\n';
+            continue;
+        }
+        int pallete_size;
+        in >> pallete_size;
+        if (pallete_size < 0 || pallete_size > MAXNROFCOLORS) {
+            cout << "[SPRITE_EDITOR] Invalid nr of colors.\n";
+            cout << "[SPRITE_EDITOR] Nr of colors must be a integer lower than " << MAXNROFCOLORS << "and greater or equal than 0.";
+            continue;
+        }
+        for (int i = 0; i < pallete_size; i++) {
+            int r, g, b;
+            in >> r >> g >> b;
+            if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+                cout << "[SPRITE_EDITOR] Invalid color in pallete file.\n"; 
+                cout << "[SPRITE_EDITOR] Every color value must be an integer lower than 256 and greater or equal to 0.\n";
+                continue;
+            }
+            current_pallete[i] = {r, g, b};
+        }  
+        in.close();
+        cout << "[SPRITE_EDITOR] Successfully loaded pallete from " << crdir + tokens[1] << '\n';
+    }
+
 
     if (tokens[0] == "applypallete") {
         if (tokens.size() < 2) {
@@ -515,10 +597,18 @@ void get_command() {
             cout << "[SPRITE_EDITOR] Nr of colors must be a integer lower than " << MAXNROFCOLORS << "and greater or equal than 0.";
             continue;
         }
-        for (int i = 0; i < pallete_size; i++) canvas->get_srenderer().pallete[i] = current_pallete[i];
-        canvas->get_srenderer().nr_of_colors = pallete_size;
+        for (int i = 0; i < pallete_size; i++) {
+            canvas->get_srenderer().pallete[i] = current_pallete[i];
+            brush.get_srenderer().pallete[i] = current_pallete[i];
+        }
         canvas->refresh();
+        brush.refresh();
         cout << "[SPRITE_RENDERER] Successfully applied changes to pallete.\n";
+        continue;
+    }
+
+    if (tokens[0] == "clear") {
+        cout << "\x1b[2J\x1b[H" << flush;
         continue;
     }
 
@@ -534,10 +624,12 @@ void get_command() {
     });
     window.add_sprite_to_renderer(canvas);
     brush.set_coords(0, 0);
+    brush.show();
 
     unsigned int font_h = round((double) window.screen_size.y / FONT_RATIO_HEIGHT);
     unsigned int font_w = round((double) window.screen_size.x / FONT_RATIO_LENGTH);
     window.set_font_settings(font_h, font_w);
+    cout << "\x1b[2J\x1b[H" << flush;
 }
 
 HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
@@ -581,8 +673,8 @@ void loop () {
     //  Handle brush movement to follow mouse
     GetCursorPos(&p);
     unsigned int x = (double)p.x / ((double) window.screen_size.y / FONT_RATIO_HEIGHT) * FONT_WIDTH_MULTIPLIER;
-    unsigned int y = round((double)p.y / ((double) window.screen_size.x / FONT_RATIO_LENGTH));
-    if (canvas->frame_size.y > y && canvas->frame_size.x > x) brush.set_coords(x, y);
+    unsigned int y = round((double)p.y / ((double) window.screen_size.x / FONT_RATIO_LENGTH)) * FONT_HEIGHT_MULTIPLIER;
+    if (canvas->frame_size.y > y && canvas->frame_size.x > x && (brush.get_coords().x != x || brush.get_coords().y != y)) brush.set_coords(x, y);
     //  If selection mode active, handle coords
     if (s_mode) {
         selection.x2 = brush.get_coords().x;
@@ -623,9 +715,9 @@ void loop () {
                     canvas->frames[canvas->get_animation().current_frame][y][x].character = ' ';
                     mods.push_back(p1);
                 }
-                Sleep(1000);
                 push_undo(mods);
             }
+            Sleep(2000);
             //  Turn off selection mode
             s_mode = 0;
         } else {
@@ -676,10 +768,12 @@ void loop () {
         if (!changes.empty()) tmp = changes[changes.size() - 1];
 
         //  Write and push changes
-        if (changes.empty() || tmp.coords.x != current_change.coords.x || tmp.coords.y != current_change.coords.y) {
+        if (changes.empty() || tmp.cell.character != current_change.cell.character || tmp.cell.color_id != current_change.cell.color_id ||
+        tmp.coords.x != current_change.coords.x || tmp.coords.y != current_change.coords.y) {
             changes.push_back(current_change);
             canvas->frames[c_frame][brush.get_coords().y][brush.get_coords().x] = brush.frames[0][0][0];
             saved = false;
+            canvas->refresh();
         }
     } 
     else if (!s_mode && brush.get_view().visible) push_undo(changes);
@@ -694,18 +788,24 @@ void loop () {
         };
         for (int y = 0; y < selection_s.frame_size.y; y++) {
             for (int x = 0; x < selection_s.frame_size.x; x++) {
-                selection_s.frames[y][x]->character = ' ';
+                selection_s.frames[0][y][x].character = ' ';
             }
         }
         for (unsigned int y = tmp.y1; y <= tmp.y2; y++) {
             for (unsigned int x = tmp.x1; x <= tmp.x2; x++) {
-                selection_s.frames[y][x]->character = '.';
+                selection_s.frames[0][y][x].character = '.';
             }
         }
+        selection_s.refresh();
     }
 
     window.empty_keys();
-    if (canvas->get_animation().is_animation_active) canvas->next_game_tick();
+
+    // Animation fix: always advance animation if active
+    if (canvas->get_animation().is_animation_active) {
+        canvas->next_game_tick();
+        canvas->refresh();
+    }
 }
 
 //   ________
@@ -716,17 +816,18 @@ int main() {
     //  Mouse input setup
     setup_input();
 
-    //  Check brush file before init
-    const char brush_file_name[] = "brush.spr";
-    ifstream in(brush_file_name);
-    if (in.is_open()) {
-        in.close();
-        brush.init_by_file(brush_file_name);
-    } else cout << "[SPRITE_EDITOR] Unable to open brush.spr\n";
-
     //  Setup
-    brush.transparent_space(false);
     brush.set_stage(1);
+    brush.frame_size.y = 1;
+    brush.frame_size.x = 1;
+    brush.set_nr_of_frames(1);
+    brush.sprite_init();
+    brush.transparent_space(false);
+    for (int i = 0; i < brush.get_srenderer().nr_of_colors; i++) 
+        brush.get_srenderer().pallete[i] = {255, 0, 0};
+    brush.frames[0][0][0].character = '#';
+    brush.frames[0][0][0].color_id = 0;
+    brush.refresh();
 
     //  Clipboard
     clipboard.set_nr_of_frames(1);
@@ -734,6 +835,8 @@ int main() {
     clipboard.frame_size.x = WINDOWLENGTH;
     clipboard.hide();
     clipboard.sprite_init();
+    for (int i = 0; i < clipboard.get_srenderer().nr_of_colors; i++) 
+        clipboard.get_srenderer().pallete[i] = {255, 0, 0};
 
     //  Selection
     selection_s.set_nr_of_frames(1);
@@ -742,8 +845,21 @@ int main() {
     selection_s.frame_size.x = WINDOWLENGTH;
     selection_s.hide();
     selection_s.sprite_init();
+    selection_s.get_srenderer().pallete[0] = {100, 100, 100};
+
+    //  Canvas
+    canvas->set_stage(0);
+    canvas->frame_size = {WINDOWLENGTH, WINDOWHEIGHT};
+    canvas->set_nr_of_frames(1);
+    canvas->sprite_init();
+
+    //  Current pallete initialisation
+    COLOR default_color = { 255, 0, 0 };
+    for (int i = 0; i < MAXNROFCOLORS; i++) 
+        current_pallete[i] = default_color;
 
     window.add_sprite_to_renderer(&brush);
+    window.add_sprite_to_renderer(&selection_s);
     get_command();
     window.game_loop(loop);
 
