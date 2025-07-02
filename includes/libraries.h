@@ -8,5 +8,16 @@
 #include <math.h>
 #include <algorithm>
 #include <functional>
+#include <thread>
+#include <atomic>
+#include <conio.h>
+#include <queue>
+#include <mutex>
+#include <cstring>
+#include <unordered_set>
+#include <sstream>
+#include <io.h>
+#include <fcntl.h>
+
 
 using namespace std;

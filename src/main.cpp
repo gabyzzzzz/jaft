@@ -4,15 +4,10 @@
 
 using namespace std;
 
-int main()
-{
-    Sprite test("../test_sprites/sprite.spr", 1);
-    //Great, working with constructors now! Great quality of life update. ( Also, kind of clean :)))) )
-    Window window;
-    window.add_sprite_to_renderer(&test);
-    window.update_buffer_from_renderer();
-    window.print_buffer();
-    
+Window window;
+
+int main() { 
+
     cin.get();
     return 0;
 }
