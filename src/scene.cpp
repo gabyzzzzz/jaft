@@ -20,13 +20,13 @@ void Scene::clean() {
 void Scene::hide_scene() {
     //Face fiecare sprite din scena invizibil
     for (unsigned int i = 0; i < nr_of_sprites; i++)
-        sprites[i]->view.visible = false;
+        sprites[i]->hide();
 }
 
 void Scene::show_scene() {
     //Face fiecare sprite din scena vizibil
     for (unsigned int i = 0; i < nr_of_sprites; i++)
-        sprites[i]->view.visible = true;
+        sprites[i]->show();
 }
 
 void Scene::add_sprite(Sprite* sprite) {
@@ -42,9 +42,9 @@ void Scene::add_sprites(Sprite** s1, unsigned int sz) {
     if (!s1) log(802);
     if (MAXNROFSPRITES <= nr_of_sprites + sz) 
         log(309, s1[0]->label);
-    for (int i = nr_of_sprites; i < nr_of_sprites + sz; i++) {
+    for (unsigned int i = 0; i < sz; i++) {
         if (!s1[i]) log(802);
-        sprites[i] = s1[i - nr_of_sprites]; 
+        sprites[nr_of_sprites + i] = s1[i];
     }
     nr_of_sprites += sz;
 }

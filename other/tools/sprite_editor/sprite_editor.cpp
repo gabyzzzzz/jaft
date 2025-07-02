@@ -1,11 +1,9 @@
-//       _-------------------------------------------------------------------------_
+//       ___________________________________________________________________________
 //      | THIS IS A TOOL BUILT FOR CREATING AND EDITING SPRITE MODELS.              |
 //      | ANYTHING CREATED HERE IS NOT GUARANTEED TO BE SUITED FOR FUTURE VERSIONS. |
-//      -----------------------------------------------------------------------------
 
-//       _--------------------------------------------_
-//      | FEEL FREE TO USE THIS FOR TESTING PURPOSES  |
-//      ----------------------------------------------
+//       ____________________________________________
+//      | FEEL FREE TO USE THIS FOR TESTING PURPOSES |
 
 
 #include "../includes/libraries.h"
@@ -17,7 +15,8 @@
 using namespace std;
 
 
-//  ------------------------- VARIABLES ----------------------------------------
+//   ____________________
+//  | VARIABLES / OTHERS |
 
 const int stack_limit = 50;
 struct change {
@@ -47,8 +46,13 @@ string crdir = "";
 string crfile = "";
 
 Sprite clipboard(2);
+Sprite selection_s(3);
 
-//  ----------------------------------------------------------------------------
+COLOR current_pallete[60];
+string pallete_dir;
+
+//   _______________________
+//  | FUNCTIONS / UTILITIES |
 
 //  Commits change to undo_stack and clears vector
 void push_undo(vector<change>& mods) {
@@ -72,7 +76,7 @@ void push_redo(vector<change>& mods) {
 void copy_chunk_from_sprite(rectangle to_copy, unsigned int x_to_paste, unsigned int y_to_paste, Sprite* target, Sprite* source) {
     //  Variables
     POINT_e diff = {to_copy.x2 - to_copy.x1 + 1, to_copy.y2 - to_copy.y1 + 1};
-    POINT_e frames = {target->animation.current_frame, source->animation.current_frame};
+    POINT_e frames = {target->get_animation().current_frame, source->get_animation().current_frame};
     vector<change> mods;
     for (unsigned int y = 0; y < diff.y && y + y_to_paste < WINDOWHEIGHT; y++) {
         for (unsigned int x = 0; x < diff.x && x + x_to_paste < WINDOWLENGTH; x++) {
@@ -148,6 +152,7 @@ void redo () {
     redo_stack.pop_front();
 }
 
+//  Divides input into tokens separated by spaces
 vector<string> tokenize_input(string input) {
     vector<string> ret_val;
     string t;
@@ -163,24 +168,35 @@ vector<string> tokenize_input(string input) {
     else return {""};
 }
 
+//  Saves the contents of the file to a file specified in the arguments
 void save_to(string cnct) {
     ofstream out(cnct);
-    out << canvas->frame_size.y << ' ' << canvas->frame_size.x << ' ' << canvas->animation.nr_of_frames << ' ';
-    for (unsigned int f = 0; f < canvas->animation.nr_of_frames; f++) 
-    for (unsigned int h = 0; h < canvas->frame_size.y; h++) 
-    for (unsigned int w = 0; w < canvas->frame_size.x; w++) {
-        CELL current = canvas->frames[f][h][w];
-        out << current.color.r << ' ' << current.color.g << ' ' << current.color.b << ' ' << (int) current.character << ' ';
+    if (!out.is_open()) {
+        cout << "[SPRITE_EDITOR] Couldn't open file " << crdir + cnct << '\n';
+    }
+    out << canvas->frame_size.y << ' ' << canvas->frame_size.x << ' ';
+    out << canvas->get_animation().nr_of_frames << ' ' << canvas->get_srenderer().nr_of_colors << ' ';
+    for (int i = 0; i < canvas->get_srenderer().nr_of_colors; i++) {
+        out << canvas->get_srenderer().pallete[i].r << ' ';
+        out << canvas->get_srenderer().pallete[i].g << ' ';
+        out << canvas->get_srenderer().pallete[i].b << ' ';
+    }
+    for (int i = 0; i < canvas->frame_size.y; i++) {
+        for (int j = 0; j < canvas->frame_size.x; j++) {
+            out << canvas->frames[i][j]->color_id << ' ';
+            out << canvas->frames[i][j]->character << ' ';
+        }
     }
     out.flush();
-    cout << "[CONSOLE] Successfully saved file.\n";
+    cout << "[SPRITE_EDITOR] Successfully saved file.\n";
     saved = true;
 }
 
+//  Returns a triangle that defines the immage without whitespace
 rectangle get_drawing(Sprite* source) {
     unsigned int y_limit = source->frame_size.y;
     unsigned int x_limit = source->frame_size.x;
-    unsigned int cf = source->animation.current_frame;
+    unsigned int cf = source->get_animation().current_frame;
     bool found = false;
     rectangle rt_val = {x_limit, y_limit, 0, 0};
     for (unsigned int y = 0; y < y_limit; y++) {
@@ -198,24 +214,24 @@ rectangle get_drawing(Sprite* source) {
     return rt_val;
 }
 
-bool confirm_unsaved_file() {
+//  Confirms unsaved file
+bool confirm_unsaved() {
     if (!saved) {
         char choice;
-        cout << "[CONSOLE] You didn't save your current file. Do you wish to proceed? y/n \n>_ ";
+        cout << "[SPRITE_EDITOR] You didn't save your current work. Do you wish to proceed? y/n \n>_ ";
         cin >> choice;
         if (choice != 'y' && choice != 'Y') {
-            cout << "[CONSOLE] Command aborted.\n";
+            cout << "[SPRITE_EDITOR] Command aborted.\n";
             return false;
-        } else {
-            cout << "[CONSOLE] Not saving file...\n";
         }
     }
     return true;
 }
 
+//  Main loop on cli
 void get_command() {
 
-    window.empty_buffer();
+    window.clear_screen();
     window.print_buffer();
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     COORD topLeft = { 0, 0 };
@@ -237,8 +253,8 @@ void get_command() {
     //  Identify and execute command
     if (tokens[0] == "open") {
         //  Opening file
-        if (tokens.size() < 2) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
-        if (confirm_unsaved_file()) {
+        if (tokens.size() < 2) { cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
+        if (confirm_unsaved()) {
             //  Set current path
             string conct = crdir + tokens[1];
             char file_name[101];
@@ -247,14 +263,14 @@ void get_command() {
             else file_name[100] = '\0';
             ifstream in(file_name);
             if (!(in.is_open())) {
-                cout << "[CONSOLE] Could not find specified file \"" + conct << "\"\n";
+                cout << "[SPRITE_EDITOR] Could not find specified file \"" + conct << "\"\n";
             } else {
                 redo_stack.clear();
                 undo_stack.clear();
                 delete canvas;
                 canvas = nullptr;
                 canvas = new Sprite(file_name, 1);
-                cout << "[CONSOLE] Successfully opened file.\n";
+                cout << "[SPRITE_EDITOR] Successfully opened file.\n";
                 crfile = tokens[1];
                 in.close();
             }
@@ -264,21 +280,21 @@ void get_command() {
 
     if (tokens[0] == "create") {
         //  Opening file
-        if (tokens.size() < 3 || (tokens.size() > 3 && tokens.size() < 5)) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
-        if (confirm_unsaved_file()) {
+        if (tokens.size() < 3 || (tokens.size() > 3 && tokens.size() < 5)) { cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
+        if (confirm_unsaved()) {
             string conct = crdir + tokens[1];
             char file_name[101];
             strncpy(file_name, conct.c_str(), conct.size());
             if (conct.size() < 101) file_name[conct.size()] = '\0';
             else file_name[100] = '\0';
             ofstream out(file_name);
-            if (!(out.is_open())) { cout << "[CONSOLE] Could not create the file. Aborting...\n"; continue; }
+            if (!(out.is_open())) { cout << "[SPRITE_EDITOR] Could not create the file. Aborting...\n"; continue; }
             redo_stack.clear();
             undo_stack.clear();
             delete canvas;
             canvas = nullptr;
             canvas = new Sprite(1);
-            canvas->animation.nr_of_frames = stoi(tokens[2]);
+            canvas->set_nr_of_frames(stoi(tokens[2]));
             if (tokens.size() > 3) {
                 canvas->frame_size.y = stoi(tokens[3]);
                 canvas->frame_size.x = stoi(tokens[4]);
@@ -287,7 +303,7 @@ void get_command() {
                 canvas->frame_size.x = WINDOWLENGTH; 
             }
             canvas->sprite_init();
-            cout << "[CONSOLE] Successfully created file.\n";
+            cout << "[SPRITE_EDITOR] Successfully created file.\n";
             crfile = tokens[1];
         }
 
@@ -295,34 +311,34 @@ void get_command() {
     }
 
     if (tokens[0] == "saveas") {
-        if (tokens.size() < 2) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
+        if (tokens.size() < 2) { cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
         string cnct = crdir + tokens[1];
         save_to(cnct);
         continue;
     }
 
     if (tokens[0] == "cd") {
-        if (tokens.size() < 2) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
+        if (tokens.size() < 2) { cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
         crdir = tokens[1];
         if ((crdir[0] == '/') && (crdir.size() == 1)) crdir = "";
         continue;
     }
 
     if (tokens[0] == "setchar") {
-        if (tokens.size() < 2) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
+        if (tokens.size() < 2) { cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
         if (tokens[1] == "32") brush.frames[0][0][0].character = ' ';
         else brush.frames[0][0][0].character = tokens[1][0];
         continue;
     }
 
     if (tokens[0] == "color") {
-        if (tokens.size() < 4) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
-        COLOR& current_color = brush.frames[0][0][0].color;
+        if (tokens.size() < 4) { cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
+        COLOR& current_color = brush.get_srenderer().pallete[brush.frames[0][0][0].color_id];
         current_color.r = stoi(tokens[1]);
         current_color.g = stoi(tokens[2]);
         current_color.b = stoi(tokens[3]);
         if (current_color.r > 256 || current_color.g > 256 || current_color.b > 256) 
-        cout << "[CONSOLE] Invalid rgb code.\n";
+        cout << "[SPRITE_EDITOR] Invalid rgb code.\n";
         continue;
     }
 
@@ -334,17 +350,17 @@ void get_command() {
     }
 
     if (tokens[0] == "setframe") {
-        if (tokens.size() < 2) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
-        unsigned int& cf = canvas->animation.current_frame;
+        if (tokens.size() < 2) { cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
+        unsigned int cf = canvas->get_animation().current_frame;
         cf = stoi(tokens[1]);
-        if (cf >= canvas->animation.nr_of_frames) cf = 0;
+        if (cf >= canvas->get_animation().nr_of_frames) cf = 0;
         continue;
     }
 
     if (tokens[0] == "align") {
         rectangle to_copy = get_drawing(canvas);
         vector<change> mods;
-        unsigned int cf = canvas->animation.current_frame;
+        unsigned int cf = canvas->get_animation().current_frame;
         for (unsigned int y = to_copy.y1; y <= to_copy.y2; y++) {
             for (unsigned int x = to_copy.x1; x <= to_copy.x2; x++) {
                 POINT_e p = {x, y};
@@ -361,22 +377,22 @@ void get_command() {
     }
 
     if (tokens[0] == "astr") {
-        brush.view.visible = false;
-        canvas->animation.is_animation_active = true;
+        brush.hide();
+        canvas->start_animation();
         continue;
     }
 
     if (tokens[0] == "astp") {
-        brush.view.visible = true;
-        canvas->animation.is_animation_active = false;
+        brush.show();
+        canvas->stop_animation();
         continue;
     }
 
     if (tokens[0] == "tpf") {
-        if (tokens.size() < 2) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
+        if (tokens.size() < 2) { cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
         int value = stoi(tokens[1]);
-        if (value <= 0) { cout << "[CONSOLE] Ticks per frame must be greater than 0.\n"; continue; }
-        canvas->animation.ticks_per_frame = value;
+        if (value <= 0) { cout << "[SPRITE_EDITOR] Ticks per frame must be greater than 0.\n"; continue; }
+        canvas->set_ticks_per_frame(value);
         continue;
     }
 
@@ -386,14 +402,129 @@ void get_command() {
     }
 
     if (tokens[0] == "copyframe") {
-        if (tokens.size() < 2) { cout << "[CONSOLE] Not enough arguments!\n"; continue; }
-        f_copy(stoi(tokens[1]), canvas->animation.current_frame);
+        if (tokens.size() < 2) { cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
+        f_copy(stoi(tokens[1]), canvas->get_animation().current_frame);
         continue;
     }
 
-    if (tokens[0] == "esc") if (confirm_unsaved_file()) exit(0);
+    //  Shows existing colors to the console. 
+    if (tokens[0] == "showcolors") {
+        for (int i = 0; i < brush.get_srenderer().nr_of_colors; i++) {
+            cout << "\x1b[38;2;";
+            cout << brush.get_srenderer().pallete[i].r << ';';
+            cout << brush.get_srenderer().pallete[i].g << ';';
+            cout << brush.get_srenderer().pallete[i].b << 'm';
+            cout << "[COLOR " << i + "] ";
+            cout << brush.get_srenderer().pallete[i].r << ' ';
+            cout << brush.get_srenderer().pallete[i].g << ' ';
+            cout << brush.get_srenderer().pallete[i].b << '\n';
+        }
+    }
 
-    if (tokens[0] != "exit") cout << "[CONSOLE] Invalid command \"" + tokens[0] + "\"\n";
+    //  Sets a color from sprites pallete to input
+    if (tokens[0] == "setcolor") {
+        if (tokens.size() < 5) {
+            cout << "[SPRITE_EDITOR] Not enough arguments!\n";
+            cout << "[SPRITE_EDITOR] Arguments for setcolor are: color_id, color.r, color.g, color.b\n";
+            continue;
+        }
+        int color_id = stoi(tokens[1]);
+        if (color_id > MAXNROFCOLORS || color_id < 0) {
+            cout << "[SPRITE_EDITOR] Invalid color id!\n";
+            cout << "[SPRITE_EDITOR] Color id must be an integer lower than " << MAXNROFCOLORS << " and greater or equal to 0.\n";
+            continue;
+        }
+        COLOR temp = {
+            stoi(tokens[2]),
+            stoi(tokens[3]),
+            stoi(tokens[4])
+        };
+        if (temp.r < 0 || temp.r > 256) {
+            cout << "[SPRITE_EDITOR] Invalid color!\n";
+            cout << "[SPRITE_EDITOR] Every color value must be an integer lower than 257 and greater or equal to 0.\n";
+            continue;
+        }
+        brush.get_srenderer().pallete[color_id] = temp;
+        cout << "[SPRITE_EDITOR] Successfully set color no. " << color_id << " to: ";
+        cout << "\x1b[38;2;";
+        cout << brush.get_srenderer().pallete[color_id].r << ';';
+        cout << brush.get_srenderer().pallete[color_id].g << ';';
+        cout << brush.get_srenderer().pallete[color_id].b << "m#\n";
+        continue;
+    }
+
+    //  Checks if file exists and empties current pallete
+    if (tokens[0] == "createpallete") {
+        if (tokens.size() < 2) {
+            cout << "[SPRITE_EDITOR] Not enough arguments!\n";
+            cout << "[SPRITE_EDITOR] Arguments for createpallete are: name\n";
+            continue;
+        } 
+        ofstream out(crdir + tokens[1]);
+        if (!out.is_open()) {
+            cout << "[SPRITE_EDITOR] Couldn't open file " << crdir + tokens[1] << '\n';
+            continue;
+        }
+        out.close();
+        if (confirm_unsaved()) {
+            COLOR default_color = { 255, 0, 0 };
+            for (int i = 0; i < MAXNROFCOLORS; i++) 
+                current_pallete[i] = default_color;
+        }
+        pallete_dir = crdir + tokens[1];
+        cout << "[SPRITE_EDITOR] Successfully created new pallete with path: " << crdir + tokens[1] << '\n';
+        continue;
+    }
+
+    if (tokens[0] == "savepallete") {
+        if (tokens.size() < 2) {
+            cout << "[SPRITE_EDITOR] Not enough arguments!\n";
+            cout << "[SPRITE_EDITOR] Arguments for savepallete are: nr of colors\n";
+            continue;
+        }
+        int pallete_size = stoi(tokens[1]);
+        if (pallete_size < 0 || pallete_size > MAXNROFCOLORS) {
+            cout << "[SPRITE_EDITOR] Invalid nr of colors.\n";
+            cout << "[SPRITE_EDITOR] Nr of colors must be a integer lower than " << MAXNROFCOLORS << "and greater or equal than 0.";
+            continue;
+        }
+        ofstream out(pallete_dir);
+        if (!out.is_open()) {
+            cout << "[SPRITE_EDITOR] Couldn't open file " << crdir + tokens[1] << '\n';
+            continue;
+        }
+        out << pallete_size << ' ';
+        for (int i = 0; i < pallete_size; i++) {
+            cout << current_pallete[i].r << ' ';
+            cout << current_pallete[i].g << ' ';
+            cout << current_pallete[i].b << ' ';
+        }
+        cout << "[SPRITE_EDITOR] Pallete was successfully saved at " << crdir + tokens[1] << '\n';
+        continue;
+    }
+
+    if (tokens[0] == "applypallete") {
+        if (tokens.size() < 2) {
+            cout << "[SPRITE_EDITOR] Not enough arguments!\n";
+            cout << "[SPRITE_EDITOR] Arguments for savepallete are: nr of colors\n";
+            continue;
+        }
+        int pallete_size = stoi(tokens[1]);
+        if (pallete_size < 0 || pallete_size > MAXNROFCOLORS) {
+            cout << "[SPRITE_EDITOR] Invalid nr of colors.\n";
+            cout << "[SPRITE_EDITOR] Nr of colors must be a integer lower than " << MAXNROFCOLORS << "and greater or equal than 0.";
+            continue;
+        }
+        for (int i = 0; i < pallete_size; i++) canvas->get_srenderer().pallete[i] = current_pallete[i];
+        canvas->get_srenderer().nr_of_colors = pallete_size;
+        canvas->refresh();
+        cout << "[SPRITE_RENDERER] Successfully applied changes to pallete.\n";
+        continue;
+    }
+
+    if (tokens[0] == "esc") if (confirm_unsaved()) exit(0);
+
+    if (tokens[0] != "exit") cout << "[SPRITE_EDITOR] Invalid command \"" + tokens[0] + "\"\n";
 
     } while (tokens[0] != "exit");
 
@@ -402,15 +533,12 @@ void get_command() {
         else return false;
     });
     window.add_sprite_to_renderer(canvas);
-    brush.coords.y = 0; brush.coords.y = 0;
+    brush.set_coords(0, 0);
 
     unsigned int font_h = round((double) window.screen_size.y / FONT_RATIO_HEIGHT);
     unsigned int font_w = round((double) window.screen_size.x / FONT_RATIO_LENGTH);
     window.set_font_settings(font_h, font_w);
 }
-
-
-//  -----------------------------------CHATGPT CODE DONT TOUCH IT----------------------------------------
 
 HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
 INPUT_RECORD inputRecord;
@@ -441,30 +569,24 @@ bool left_mouse_down() {
     return false;
 }
 
-//  -----------------------------------------------------------------------------------------------------
-
-//   _______
-//  | LOOP |
-//   
+//   ______
+//  | LOOP |  
 
 int s_mode = 0;
 rectangle selection;
 
 void loop () {
-    unordered_set<char> input = window.get_keys_pressed();
+    unordered_set<char> input = window.get_keys();
     
     //  Handle brush movement to follow mouse
     GetCursorPos(&p);
     unsigned int x = (double)p.x / ((double) window.screen_size.y / FONT_RATIO_HEIGHT) * FONT_WIDTH_MULTIPLIER;
     unsigned int y = round((double)p.y / ((double) window.screen_size.x / FONT_RATIO_LENGTH));
-    if (canvas->frame_size.y > y && canvas->frame_size.x > x) {
-        brush.coords.x = x;
-        brush.coords.y = y;
-    }
+    if (canvas->frame_size.y > y && canvas->frame_size.x > x) brush.set_coords(x, y);
     //  If selection mode active, handle coords
     if (s_mode) {
-        selection.x2 = brush.coords.x;
-        selection.y2 = brush.coords.y;
+        selection.x2 = brush.get_coords().x;
+        selection.y2 = brush.get_coords().y;
     }
     //  Handle commands
     if (input.count('q')) get_command();
@@ -473,7 +595,8 @@ void loop () {
 
     if (input.count('c')) {
         if (s_mode) {
-            brush.view.visible = true;
+            selection_s.hide();
+            brush.show();
             rectangle cpy = {
                 min(selection.x1, selection.x2), 
                 min(selection.y1, selection.y2), 
@@ -492,8 +615,12 @@ void loop () {
                 for (unsigned y = cpy.y1; y <= cpy.y2; y++) 
                 for (unsigned x = cpy.x1; x <= cpy.x2; x++) {
                     POINT_e p = {x, y};
-                    change p1 = { p, canvas->frames[canvas->animation.current_frame][y][x], canvas->animation.current_frame};
-                    canvas->frames[canvas->animation.current_frame][y][x].character = ' ';
+                    change p1 = { 
+                        p, 
+                        canvas->frames[canvas->get_animation().current_frame][y][x],
+                        canvas->get_animation().current_frame
+                    };
+                    canvas->frames[canvas->get_animation().current_frame][y][x].character = ' ';
                     mods.push_back(p1);
                 }
                 Sleep(1000);
@@ -502,41 +629,60 @@ void loop () {
             //  Turn off selection mode
             s_mode = 0;
         } else {
-            brush.view.visible = false;
+            brush.hide();
+            selection_s.show();
             s_mode = 1;
-            selection = {brush.coords.x, brush.coords.y, brush.coords.x, brush.coords.y};
+            selection = {
+                brush.get_coords().x, 
+                brush.get_coords().y, 
+                brush.get_coords().x, 
+                brush.get_coords().y
+            };
         }
     }
 
     if (input.count('x')) {
         s_mode = 2;
-        selection = {brush.coords.x, brush.coords.y, brush.coords.x, brush.coords.y};
+        selection_s.show();
+        selection = {
+            brush.get_coords().x, 
+            brush.get_coords().y, 
+            brush.get_coords().x, 
+            brush.get_coords().y
+        };
     }
 
     if (input.count('p')) {
         rectangle to_copy = get_drawing(&clipboard);
-        copy_chunk_from_sprite(to_copy, brush.coords.x, brush.coords.y, canvas, &clipboard);
+        copy_chunk_from_sprite(to_copy, brush.get_coords().x, brush.get_coords().y, canvas, &clipboard);
     }
 
     //  On click
-    if (left_mouse_down() && brush.view.visible && !s_mode) {
+    if (left_mouse_down() && brush.get_view().visible && !s_mode) {
         //  Clear stack
         redo_stack.clear();
-        unsigned int c_frame = canvas->animation.current_frame;
+        unsigned int c_frame = canvas->get_animation().current_frame;
         //  Register changes
-        POINT_e p = {brush.coords.x, brush.coords.y};
-        change current_change = { p, canvas->frames[c_frame][brush.coords.y][brush.coords.x], c_frame };
+        POINT_e p = {
+            brush.get_coords().x, 
+            brush.get_coords().y
+        };
+        change current_change = { 
+            p, 
+            canvas->frames[c_frame][brush.get_coords().y][brush.get_coords().x], 
+            c_frame 
+        };
         change tmp;
         if (!changes.empty()) tmp = changes[changes.size() - 1];
 
         //  Write and push changes
         if (changes.empty() || tmp.coords.x != current_change.coords.x || tmp.coords.y != current_change.coords.y) {
             changes.push_back(current_change);
-            canvas->frames[c_frame][brush.coords.y][brush.coords.x] = brush.frames[0][0][0];
+            canvas->frames[c_frame][brush.get_coords().y][brush.get_coords().x] = brush.frames[0][0][0];
             saved = false;
         }
     } 
-    else if (!s_mode && brush.view.visible) push_undo(changes);
+    else if (!s_mode && brush.get_view().visible) push_undo(changes);
 
     //  Mark rectangle selected
     if (s_mode) {
@@ -546,20 +692,20 @@ void loop () {
             max(selection.x1, selection.x2), 
             max(selection.y1, selection.y2)
         };
+        for (int y = 0; y < selection_s.frame_size.y; y++) {
+            for (int x = 0; x < selection_s.frame_size.x; x++) {
+                selection_s.frames[y][x]->character = ' ';
+            }
+        }
         for (unsigned int y = tmp.y1; y <= tmp.y2; y++) {
             for (unsigned int x = tmp.x1; x <= tmp.x2; x++) {
-                char* c_str = window.buffer + (y * (WINDOWLENGTH + 1) + x) * 20;
-                //char clr[21] = "\x1b[38;2;<r>;<g>;<b>m<char>";
-                c_str[19] = '.';
-                memcpy(c_str + 7,  "57", 3);
-                memcpy(c_str + 11, "57", 3);
-                memcpy(c_str + 15, "57", 3);
+                selection_s.frames[y][x]->character = '.';
             }
         }
     }
 
-    window.empty_keys_pressed();
-    if (canvas->animation.is_animation_active) canvas->next_game_tick();
+    window.empty_keys();
+    if (canvas->get_animation().is_animation_active) canvas->next_game_tick();
 }
 
 //   ________
@@ -576,16 +722,27 @@ int main() {
     if (in.is_open()) {
         in.close();
         brush.init_by_file(brush_file_name);
-    } else cout << "[CONSOLE] Unable to open brush.spr\n";
+    } else cout << "[SPRITE_EDITOR] Unable to open brush.spr\n";
 
     //  Setup
-    brush.view.transparent_white_spaces = false;
-    brush.view.stage = 1;
-    clipboard.animation.nr_of_frames = 1;
+    brush.transparent_space(false);
+    brush.set_stage(1);
+
+    //  Clipboard
+    clipboard.set_nr_of_frames(1);
     clipboard.frame_size.y = WINDOWHEIGHT;
     clipboard.frame_size.x = WINDOWLENGTH;
-    clipboard.view.visible = false;
+    clipboard.hide();
     clipboard.sprite_init();
+
+    //  Selection
+    selection_s.set_nr_of_frames(1);
+    selection_s.set_stage(3);
+    selection_s.frame_size.y = WINDOWHEIGHT;
+    selection_s.frame_size.x = WINDOWLENGTH;
+    selection_s.hide();
+    selection_s.sprite_init();
+
     window.add_sprite_to_renderer(&brush);
     get_command();
     window.game_loop(loop);

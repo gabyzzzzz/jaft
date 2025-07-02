@@ -6,15 +6,20 @@
 void log(int err_code, int sprite_label = -1);
 
 struct COLOR {
-    unsigned short int r, g, b;
+    int r, g, b;
 };
 
 struct POINT_e {
     unsigned int x = 0, y = 0;
 };
 
+struct SBIT {
+    POINT_e coords;
+    char character;
+};
+
 struct CELL {
-    COLOR color;
+    int color_id;
     char character; 
 };
 
@@ -29,20 +34,87 @@ struct ANIMATION {
     unsigned int nr_of_frames = 0, current_frame = 0, ticks_per_frame = 1, current_tick = 0;
 };
 
+struct BUFFER {
+    //  TODO - change the value below
+    char value[WINDOWHEIGHT * WINDOWLENGTH * BUFFERMULTIPLIER];
+    bool modified = false;
+    size_t size = 0;
+};
+
+struct SPRITESTATUS {
+    bool coord_changed = true, modified = false;
+};
+
+struct CURSORHOPS {
+    size_t* size = nullptr;
+    int** indexes = nullptr;
+    POINT_e** values = nullptr;
+};
+
+struct COLOREDCHUNKS {
+    SBIT*** container = nullptr;
+    size_t** size = nullptr; 
+};
+
+struct SRENDERER {
+    size_t nr_of_colors = MAXNROFCOLORS;
+    size_t* size = nullptr;
+    COLOR* pallete = nullptr;
+    char** value = nullptr;
+    COLOREDCHUNKS colored_chunks;
+    CURSORHOPS cursor_hops;
+};
+
+struct PREVS {
+    POINT_e upper_left, lower_right;
+};
+
 class Sprite
 {
-public:
-    POINT_e coords, frame_size;
-    VIEW view;
+private:
+    void alocate_memory();
+    inline void refresh_colored_chunks(int target_frame);
+    inline void cursor_hop(int target_frame, unsigned int x, unsigned int y);
+    void color_to_string(COLOR clr, char* target);
+    //  CHANGE - IF THE COORDONATES GO TO MORE THAN TRIPLE DIGITS
+    char cursor_pos_placeholder[10] = "\x1b[00;000H";
+    void refresh_render_code(COLOR pallete_[], int target_frame);
+    POINT_e coords;
     ANIMATION animation;
+    VIEW view;
+    SPRITESTATUS status;
+public:
+    SRENDERER renderer;
+    POINT_e frame_size;
     unsigned int label = 0;
     CELL*** frames = nullptr;
-
-    void DEBUG_sprite(); // A bit outdated
+    PREVS previous_pos;
+    
+    void DEBUG_sprite(); 
+    void DEBUG_render_code();
 
     void next_game_tick();
-    bool is_colliding(Sprite* sprite);
-    bool is_colliding(Sprite* sprite, const char characters[], unsigned int sz);
+    bool is_colliding(const Sprite& sprite) const;
+    bool is_colliding(const Sprite& sprite, const char characters[], unsigned int sz) const;
+    POINT_e get_coords() const;
+    void set_coords(int x, int y);
+    void add_x(int x);
+    void add_y(int y);
+    ANIMATION get_animation() const;
+    void start_animation();
+    void stop_animation();
+    void set_current_frame(int frame);
+    void set_ticks_per_frame(int ticks_per_frame);
+    void set_current_tick(int current_tick);
+    void set_nr_of_frames(int frames);
+    VIEW get_view() const;
+    SPRITESTATUS& get_status();
+    SRENDERER& get_srenderer();
+    void hide();
+    void show();
+    void transparent_space(bool condition);
+    void set_stage(int z_index);
+    void refresh();
 
     void init_by_file(const char file_name[]);
     Sprite(unsigned int lbl);
@@ -52,6 +124,10 @@ public:
     ~Sprite();
 };
 
+struct RENDERER {
+    Sprite* container[MAXNROFSPRITES];
+    size_t size = 0;
+};
 
 class Scene{
 public:
@@ -79,19 +155,23 @@ public:
     ~Scene();
 };
 
-
 class Window
 {
 private:
-    const unsigned int total_buffer_size = WINDOWHEIGHT * (WINDOWLENGTH + 1) * 20;
+    //  TODO - also to change 
+    const unsigned int total_buffer_size = WINDOWHEIGHT * WINDOWLENGTH * BUFFERMULTIPLIER * MAXNROFSPRITES;
+    CHAR_INFO clear_buffer[WINDOWLENGTH * WINDOWHEIGHT];
+    SMALL_RECT write_region;
+    char cursor_pos_placeholder[10] = "\x1b[00;000H";
+    inline void inject_cursor_coords(const Sprite& sprite, int traversed);
+    inline void render_all(int c_index, int traversed);
+    void init_clear_buffer();
+    inline void clear_rectangle(POINT_e upper_left, POINT_e lower_right);
 public:
-    POINT_e screen_size;
-    unsigned int nr_of_sprites_in_renderer = 0;
-    POINT_e font_size;
-    char buffer[WINDOWHEIGHT * (WINDOWLENGTH + 1) * 20];
-    Sprite* renderer[MAXNROFSPRITES];
+    POINT_e screen_size, font_size; 
+    BUFFER buffer;
+    RENDERER renderer;
 
-    void stringcpy(char* s1, char* s2);
     void clean_renderer();
     void empty_renderer();
     void update_buffer_from_renderer();
@@ -102,12 +182,13 @@ public:
     void remove_sprites_from_renderer(function<bool(Sprite*)> condition);
 
     void print_buffer();
-    void empty_buffer();
+    inline void clear_screen();
 
-    void DEBUG_fill(); //   A bit outdated
+    void DEBUG_fill(); 
+    void DEBUG_buffer();
     
-    unordered_set<char> get_keys_pressed();
-    void empty_keys_pressed();
+    unordered_set<char> get_keys();
+    void empty_keys();
     void gml(function<void()> game_logic);
     void game_loop(function<void()> game_logic);
     void input();

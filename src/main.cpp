@@ -4,10 +4,10 @@
 
 using namespace std;
 
+Window window;
+
 int main() { 
-    Window window;
-    window.DEBUG_fill();
-    
+
     cin.get();
     return 0;
 }
