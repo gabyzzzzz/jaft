@@ -5,14 +5,17 @@
 //       ____________________________________________
 //      | FEEL FREE TO USE THIS FOR TESTING PURPOSES |
 
-
-#include "../src/libraries.h"
-#include "../src/defines.h"
-#include "../src/classes.h"
+#define NOMINMAX
+#include "../lib/jaft.h"
 #include <vector>
 #include <deque>
+#include <algorithm>
 #include <iostream>
+#include <string>
+#include <fstream>
+#include <cmath>
 
+using namespace jaft;
 //   ____________________
 //  | VARIABLES / OTHERS |
 
@@ -116,12 +119,10 @@ void undo() {
     if (undo_stack.empty()) return;
     std::vector<change> und = undo_stack.front();
     std::vector<change> red;
-    int sz = und.size();
-    unsigned int x, y, c_frame;
-    for (int i = 0; i < sz; i++) {
-        x = und[i].coords.x;
-        y = und[i].coords.y;
-        c_frame = und[i].c_frame;
+    for (int i = static_cast<int>(und.size()) - 1; i >= 0; --i) {
+        unsigned int x = und[i].coords.x;
+        unsigned int y = und[i].coords.y;
+        unsigned int c_frame = und[i].c_frame;
 
         POINT_e coords = {x, y};
         change p1 = {coords, canvas->frames[c_frame][y][x], c_frame};
@@ -687,10 +688,10 @@ void loop () {
             selection_s.hide();
             brush.show();
             rectangle cpy = {
-                min(selection.x1, selection.x2), 
-                min(selection.y1, selection.y2), 
-                max(selection.x1, selection.x2), 
-                max(selection.y1, selection.y2)
+                std::min(selection.x1, selection.x2), 
+                std::min(selection.y1, selection.y2), 
+                std::max(selection.x1, selection.x2), 
+                std::max(selection.y1, selection.y2)
             };
             //  Empty clipboard
             for (int y = 0; y < WINDOWHEIGHT; y++) 
@@ -778,10 +779,10 @@ void loop () {
     //  Mark rectangle selected
     if (s_mode) {
         rectangle tmp = {
-            min(selection.x1, selection.x2), 
-            min(selection.y1, selection.y2), 
-            max(selection.x1, selection.x2), 
-            max(selection.y1, selection.y2)
+            std::min(selection.x1, selection.x2), 
+            std::min(selection.y1, selection.y2), 
+            std::max(selection.x1, selection.x2), 
+            std::max(selection.y1, selection.y2)
         };
         for (int y = 0; y < selection_s.frame_size.y; y++) {
             for (int x = 0; x < selection_s.frame_size.x; x++) {

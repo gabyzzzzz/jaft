@@ -1,4 +1,2 @@
-*.exe
-log.txt
 .vscode/
-build/*.spr
+build

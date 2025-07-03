@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include "classes.h"
 #include "libraries.h"
 #include "defines.h"
@@ -323,10 +324,10 @@ bool Sprite::is_colliding(const Sprite& sprite, const char characters[], unsigne
     if (!is_colliding(sprite)) return false;
     if (sz < 1) log(702, label);
     if (!characters) log(702, label);
-    unsigned int x_start = max(coords.x, sprite.coords.x);
-    unsigned int x_end = min(coords.x + frame_size.x, sprite.coords.x + sprite.frame_size.x);
-    unsigned int y_start = max(coords.y, sprite.coords.y);
-    unsigned int y_end = min(coords.y + frame_size.y, sprite.coords.y + sprite.frame_size.y);
+    unsigned int x_start = std::max(coords.x, sprite.coords.x);
+    unsigned int x_end = std::min(coords.x + frame_size.x, sprite.coords.x + sprite.frame_size.x);
+    unsigned int y_start = std::max(coords.y, sprite.coords.y);
+    unsigned int y_end = std::min(coords.y + frame_size.y, sprite.coords.y + sprite.frame_size.y);
     for (unsigned int i = y_start; i < y_end; i++) {
         for (unsigned int j = x_start; j < x_end; j++) {
             char current_pixel = sprite.frames[sprite.animation.current_frame][i - sprite.coords.y][j - sprite.coords.x].character;
