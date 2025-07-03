@@ -1,21 +1,19 @@
-#include "../includes/libraries.h"
-#include "../includes/defines.h"
-#include "../includes/classes.h"
-#include "../other/third_party/json.hpp"
+#include "libraries.h"
+#include "defines.h"
+#include "classes.h"
 
 //   ____________________
 //  | VARIABLES / OTHERS |
 
-using json = nlohmann::json;
-ofstream lg("log.txt", ios::app);
+std::ofstream lg("log.txt", std::ios::app);
 
 using highres_clock = std::chrono::high_resolution_clock;
-using duration = chrono::duration<double, milli>;
+using duration = std::chrono::duration<double, std::milli>;
 
 namespace Game {
     bool running = true;
-    unordered_set<char> keys_down;
-    mutex key_mutex;
+    std::unordered_set<char> keys_down;
+    std::mutex key_mutex;
 }
 
 namespace Config {
@@ -136,55 +134,32 @@ void log(int err_code, int sprite_label) {
 
 void Window::DEBUG_fill() {
     for (int i = 0; i < WINDOWHEIGHT; i++) {
-        for (int j = 0; j < WINDOWLENGTH; j++) cout << '*';
-        if (i < WINDOWHEIGHT - 1) cout << '\n';
+        for (int j = 0; j < WINDOWLENGTH; j++) std::cout << '*';
+        if (i < WINDOWHEIGHT - 1) std::cout << '\n';
     }
-    cout.flush();
+    std::cout.flush();
 }
 
 void Window::DEBUG_buffer() {
-    cout << "[DEBUG] Buffer size: " << buffer.size;
-    cout << "\n[DEBUG] Buffer value: \n";
+    std::cout << "[DEBUG] Buffer size: " << buffer.size;
+    std::cout << "\n[DEBUG] Buffer value: \n";
     for (int i = 0; i < buffer.size; i++) {
         if (buffer.value[i] == '\x1b') {
-            cout << "ESC";
-        } else cout << buffer.value[i];
+            std::cout << "ESC";
+        } else std::cout << buffer.value[i];
     }
-    cout << '\n';
-}
-
-//  Config from settings.json
-void Window::config() {
-    //Reading from settings json
-    ifstream conf("settings.json");
-    json settings;
-    screen_size.y = GetSystemMetrics(SM_CYFULLSCREEN); screen_size.x = GetSystemMetrics(SM_CXFULLSCREEN);
-    if (!(conf.is_open()) || !(conf >> settings)) {
-        if (!(conf.is_open())) lg << "[CONSOLE] Didn't find settings.json. Creating file...\n";
-        conf.close();
-        ofstream o("settings.json");
-        lg << "[CONSOLE] Failed extracting settings.json. Using default settings...\n";
-        json out;
-        out["FPS"] = 60;
-        Config::FPS = 60;
-        o << out;
-        o.close();
-        return;
-    }
-    if (!settings.contains("FPS") && settings["FPS"].is_number()) log(102);
-    else Config::FPS = settings["FPS"];
-    conf.close();
+    std::cout << '\n';
 }
 
 //  Constructor for window
 Window::Window() {
     if (!(lg.is_open())) {
-        cout << 999;
-        cin.get();
+        std::cout << 999;
+        std::cin.get();
         exit(999);
     }
-    ios_base::sync_with_stdio(false);
-    config();
+    std::ios_base::sync_with_stdio(false);
+    screen_size.y = GetSystemMetrics(SM_CYFULLSCREEN); screen_size.x = GetSystemMetrics(SM_CXFULLSCREEN);
     unsigned int font_h = round((double) screen_size.y / FONT_RATIO_HEIGHT);
     unsigned int font_w = round((double) screen_size.x / FONT_RATIO_LENGTH);
     set_font_settings(font_h, font_w);
@@ -248,7 +223,7 @@ void Window::add_sprite_to_renderer(Sprite* s1) {
     if (renderer.size == MAXNROFSPRITES) log(809, s1->label);
     renderer.container[renderer.size] = s1;
     renderer.size++;
-    sort(renderer.container, renderer.container + renderer.size, compare);
+    std::sort(renderer.container, renderer.container + renderer.size, compare);
 }
 
 //  Adds multiple sprites to renderer
@@ -263,7 +238,7 @@ void Window::add_sprites_to_renderer(Sprite** s1, unsigned int sz) {
     }   
     renderer.size += sz;
 
-    sort(renderer.container, renderer.container + renderer.size, compare);
+    std::sort(renderer.container, renderer.container + renderer.size, compare);
 }
 
 //  Deletes multiple sprites from the renderer
@@ -279,18 +254,18 @@ void Window::remove_sprites_from_renderer(Sprite** s1, unsigned int sz) {
         }
     }
     clean_renderer();
-    sort(renderer.container, renderer.container + renderer.size, compare);
+    std::sort(renderer.container, renderer.container + renderer.size, compare);
 }
 
 //  Deletes multiple sprites from the renderer by the condition given
-void Window::remove_sprites_from_renderer(function<bool(Sprite*)> condition) {
+void Window::remove_sprites_from_renderer(std::function<bool(Sprite*)> condition) {
     for (unsigned int i = 0; i < renderer.size; i++) {
         if (condition(renderer.container[i])) {
             renderer.container[i] = nullptr;
         }
     }
     clean_renderer();
-    sort(renderer.container, renderer.container + renderer.size, compare);
+    std::sort(renderer.container, renderer.container + renderer.size, compare);
 }
 
 //  Deletes the given sprite from the renderer
@@ -301,7 +276,7 @@ void Window::remove_sprite_from_renderer(Sprite* sprite) {
             break;
         }
     clean_renderer();
-    sort(renderer.container, renderer.container + renderer.size, compare);
+    std::sort(renderer.container, renderer.container + renderer.size, compare);
 }
 
 //  Copies a color with the apropriate format directly into the target
@@ -449,7 +424,7 @@ void Window::input() {
     while (Game::running) {
         if (_kbhit()) {
             char ch = _getch();
-            lock_guard<mutex> lock(Game::key_mutex);
+            std::lock_guard<std::mutex> lock(Game::key_mutex);
             Game::keys_down.insert(ch);
         }
         Sleep(1);
@@ -457,7 +432,7 @@ void Window::input() {
 }
 
 //  Game loop
-void Window::gml(function<void()> game_logic) {
+void Window::gml(std::function<void()> game_logic) {
     int counter = 0;
     while (Game::running) {
         game_logic();
@@ -471,14 +446,14 @@ void Window::gml(function<void()> game_logic) {
 }
 
 //  The game loop. Gets a void function that will execute every game tick
-void Window::game_loop(function<void()> game_logic) {
+void Window::game_loop(std::function<void()> game_logic) {
     std::thread input_thread([this]() { this->input(); });
     input_thread.detach();
     gml(game_logic);
 }
 
 //  Get the keys pressed
-unordered_set<char> Window::get_keys() {
+std::unordered_set<char> Window::get_keys() {
     std::lock_guard<std::mutex> lock(Game::key_mutex);
     return Game::keys_down;
 }

@@ -1,6 +1,6 @@
-#include "../includes/libraries.h"
-#include "../includes/defines.h"
-#include "../includes/classes.h"
+#include "libraries.h"
+#include "defines.h"
+#include "classes.h"
 
 void Scene::clean() {
     unsigned int rmv = 0;
@@ -66,7 +66,7 @@ void Scene::remove_sprites(Sprite** s1, unsigned int sz) {
 
 void Scene::init_by_file(const char file_name[]) {
     //Realoca si initializeaza memoria, folosind path-urile din fisier
-    ifstream in(file_name);
+    std::ifstream in(file_name);
     if(!in.is_open()) log(301);
     if (!(in >> nr_of_sprites)) log(302);
     sprites = new Sprite*[nr_of_sprites];
@@ -100,7 +100,7 @@ void Scene::remove_sprite(Sprite* sprite) {
     clean();
 }
 
-void Scene::remove_sprites(function<bool(Sprite*)> condition) {
+void Scene::remove_sprites(std::function<bool(Sprite*)> condition) {
     //Sterge pointerii sprite-urilor care respecta conditia
     unsigned int rmv = 0;
     for (unsigned int i = 0; i < nr_of_sprites; i++) 
@@ -142,10 +142,10 @@ Scene& Scene::operator=(const Scene& obj1)  {
 void Scene::DEBUG_scene() {
     //Printeaza pe consola fiecare sprite
     for (unsigned int i = 0; i < nr_of_sprites; i++) {
-        if (sprites[i] == nullptr) cout << "nullptr\n\n";
+        if (sprites[i] == nullptr) std::cout << "nullptr\n\n";
         else {
             sprites[i]->DEBUG_sprite();
-            cout << '\n';
+            std::cout << '\n';
         }
     }
 }

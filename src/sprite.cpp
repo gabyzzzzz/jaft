@@ -1,6 +1,6 @@
-#include "../includes/classes.h"
-#include "../includes/libraries.h"
-#include "../includes/defines.h"
+#include "classes.h"
+#include "libraries.h"
+#include "defines.h"
 
 //   ________________________________________________________
 //  | ALOCATING MEMORY / CONSTRUCTORS / INITIALISING THINGS |
@@ -39,8 +39,8 @@ void Sprite::alocate_memory() {
 
     }
 
-    catch (const bad_alloc& e) {
-        cout << "[JAFT] Failed alocating memory for sprite with label " << label << ". " << e.what() << endl;
+    catch (const std::bad_alloc& e) {
+        std::cout << "[JAFT] Failed alocating memory for sprite with label " << label << ". " << e.what() << std::endl;
     }
     
     previous_pos = {{1, 1}, {0, 0}};
@@ -50,7 +50,7 @@ void Sprite::alocate_memory() {
 void Sprite::init_by_file(const char file_name[]) {
     try {
 
-    ifstream in(file_name);
+    std::ifstream in(file_name);
     //  Check if file is open and the first values are valid.
     if (!in.is_open()) log(401, label);
     if (!(in >> frame_size.y >> frame_size.x >> animation.nr_of_frames >> renderer.nr_of_colors)) log(402, label);
@@ -75,8 +75,8 @@ void Sprite::init_by_file(const char file_name[]) {
 
     }
 
-    catch (const bad_alloc& e) {
-        cout << "[JAFT] Failed alocating memory for sprite with label " << label << ". " << e.what() << endl;
+    catch (const std::bad_alloc& e) {
+        std::cout << "[JAFT] Failed alocating memory for sprite with label " << label << ". " << e.what() << std::endl;
     }
 
     alocate_memory();
@@ -102,8 +102,8 @@ void Sprite::sprite_init() {
 
     }
 
-    catch (const bad_alloc& e) {
-        cout << "[JAFT] Failed alocating memory for sprite with label " << label << ". " << e.what() << endl;
+    catch (const std::bad_alloc& e) {
+        std::cout << "[JAFT] Failed alocating memory for sprite with label " << label << ". " << e.what() << std::endl;
     }
 
     alocate_memory();
@@ -163,30 +163,30 @@ Sprite::Sprite(unsigned int lbl) : label(lbl) {}
 
 //  Prints the characters from the raw matrix (a bit outdated but works)
 void Sprite::DEBUG_sprite() {
-    cout << "[DEBUG] Debugging sprite with label " << label << '\n';
-    cout << frame_size.y << ' ' << frame_size.x << ' ' << animation.nr_of_frames << "\n\n";
+    std::cout << "[DEBUG] Debugging sprite with label " << label << '\n';
+    std::cout << frame_size.y << ' ' << frame_size.x << ' ' << animation.nr_of_frames << "\n\n";
     for (unsigned int f = 0; f < animation.nr_of_frames; f++) {
         for (unsigned int h = 0; h < frame_size.y; h++) {
-            for (unsigned int w = 0; w < frame_size.x; w++) cout << frames[f][h][w].character;
-            cout << '\n';
+            for (unsigned int w = 0; w < frame_size.x; w++) std::cout << frames[f][h][w].character;
+            std::cout << '\n';
         }
-        cout << '\n';
+        std::cout << '\n';
     }
-    cout.flush();
+    std::cout.flush();
 }
 
 //  Prints the render code (frame 1) and cursor hops
 void Sprite::DEBUG_render_code() {
-    cout << "[DEBUG] Render code:\n";
+    std::cout << "[DEBUG] Render code:\n";
     for (int i = 0; i < renderer.size[animation.current_frame]; i++) {
         if (renderer.value[0][i] == '\x1b') {
-            cout << "ESC";
-        } else cout << renderer.value[0][i];
+            std::cout << "ESC";
+        } else std::cout << renderer.value[0][i];
     }
-    cout << "\n[DEBUG] Cursor hops:\n";
-    for (int i = 0; i < renderer.cursor_hops.size[animation.current_frame]; i++) cout << renderer.cursor_hops.indexes[animation.current_frame][i] << ' ';
-    cout << '\n';
-    cout.flush();
+    std::cout << "\n[DEBUG] Cursor hops:\n";
+    for (int i = 0; i < renderer.cursor_hops.size[animation.current_frame]; i++) std::cout << renderer.cursor_hops.indexes[animation.current_frame][i] << ' ';
+    std::cout << '\n';
+    std::cout.flush();
 }
 
 //   ______________________
