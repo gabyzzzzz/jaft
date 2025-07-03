@@ -1,6 +1,9 @@
 #pragma once
 
-#include "pch.h"
+#include <windows.h>
+#include <wincon.h>
+#include <functional>
+#include <unordered_set>
 
 namespace jaft {
 
