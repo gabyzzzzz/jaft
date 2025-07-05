@@ -6,7 +6,7 @@
 void log(int err_code, int sprite_label = -1);
 
 struct COLOR {
-    int r, g, b;
+    int r = 0, g = 0, b = 0;
 };
 
 struct POINT_e {
@@ -59,7 +59,7 @@ struct COLOREDCHUNKS {
 struct SRENDERER {
     size_t nr_of_colors = MAXNROFCOLORS;
     size_t* size = nullptr;
-    COLOR* pallete = nullptr;
+    COLOR* palette = nullptr;
     char** value = nullptr;
     COLOREDCHUNKS colored_chunks;
     CURSORHOPS cursor_hops;

@@ -56,9 +56,9 @@ void Sprite::init_by_file(const char file_name[]) {
     if (!in.is_open()) log(401, label);
     if (!(in >> frame_size.y >> frame_size.x >> animation.nr_of_frames >> renderer.nr_of_colors)) log(402, label);
     if (frame_size.y < 1 || frame_size.x < 1 || animation.nr_of_frames < 1 || renderer.nr_of_colors < 1) log(403, label);
-    //  Alocating and setting the values for pallete.
-    renderer.pallete = new COLOR[renderer.nr_of_colors];
-    for (int i = 0; i < renderer.nr_of_colors; i++) in >> renderer.pallete[i].r >> renderer.pallete[i].g >> renderer.pallete[i].b;
+    //  Alocating and setting the values for palette.
+    renderer.palette = new COLOR[renderer.nr_of_colors];
+    for (int i = 0; i < renderer.nr_of_colors; i++) in >> renderer.palette[i].r >> renderer.palette[i].g >> renderer.palette[i].b;
     //  We are reading the characters and color ids while also alocating memory
     unsigned int nrf = animation.nr_of_frames;
     frames = new CELL**[nrf];
@@ -89,9 +89,9 @@ void Sprite::sprite_init() {
     unsigned int nfr = animation.nr_of_frames;
     POINT_e fsz = frame_size;
     frames = new CELL**[nfr];
-    renderer.pallete = new COLOR[renderer.nr_of_colors];
+    renderer.palette = new COLOR[renderer.nr_of_colors];
     for (int i = 0; i < renderer.nr_of_colors; i++) {
-        renderer.pallete[i] = {255, 0, 0};
+        renderer.palette[i] = {255, 0, 0};
     }
     for (unsigned int f = 0; f < nfr; f++) {
         frames[f] = new CELL*[fsz.y + 1];
@@ -146,7 +146,7 @@ Sprite::~Sprite () {
     delete[] renderer.cursor_hops.size;
     
     //  This one is lonely
-    delete[] renderer.pallete;
+    delete[] renderer.palette;
 }
 
 //  Constructors
@@ -428,7 +428,7 @@ void Sprite::refresh_render_code(COLOR* pallete_, int target_frame) {
 
 void Sprite::refresh() {
     for (int i = 0; i < animation.nr_of_frames; i++)
-        refresh_render_code(renderer.pallete, i);
+        refresh_render_code(renderer.palette, i);
     status.modified = true;
     status.coord_changed = true;
 }

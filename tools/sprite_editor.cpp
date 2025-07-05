@@ -50,8 +50,8 @@ std::string crfile = "";
 Sprite clipboard(2);
 Sprite selection_s(3);
 
-COLOR current_pallete[60];
-std::string pallete_dir;
+COLOR current_palette[60];
+std::string palette_dir;
 
 //   _______________________
 //  | FUNCTIONS / UTILITIES |
@@ -184,9 +184,9 @@ void save_to(std::string cnct) {
     out << canvas->frame_size.y << ' ' << canvas->frame_size.x << ' ';
     out << canvas->get_animation().nr_of_frames << ' ' << canvas->get_srenderer().nr_of_colors << ' ';
     for (int i = 0; i < canvas->get_srenderer().nr_of_colors; i++) {
-        out << canvas->get_srenderer().pallete[i].r << ' ';
-        out << canvas->get_srenderer().pallete[i].g << ' ';
-        out << canvas->get_srenderer().pallete[i].b << ' ';
+        out << canvas->get_srenderer().palette[i].r << ' ';
+        out << canvas->get_srenderer().palette[i].g << ' ';
+        out << canvas->get_srenderer().palette[i].b << ' ';
     }
     for (int f = 0; f < canvas->get_animation().nr_of_frames; f++) {
         for (int i = 0; i < canvas->frame_size.y; i++) {
@@ -445,19 +445,19 @@ void get_command() {
     if (tokens[0] == "showcolors") {
         for (int i = 0; i < MAXNROFCOLORS; i++) {
             std::cout << "\x1b[38;2;";
-            std::cout << current_pallete[i].r << ';';
-            std::cout << current_pallete[i].g << ';';
-            std::cout << current_pallete[i].b << 'm';
+            std::cout << current_palette[i].r << ';';
+            std::cout << current_palette[i].g << ';';
+            std::cout << current_palette[i].b << 'm';
             std::cout << "[COLOR " << i << "] ";
-            std::cout << current_pallete[i].r << ' ';
-            std::cout << current_pallete[i].g << ' ';
-            std::cout << current_pallete[i].b << '\n';
+            std::cout << current_palette[i].r << ' ';
+            std::cout << current_palette[i].g << ' ';
+            std::cout << current_palette[i].b << '\n';
         }
         reset_color();
         continue;
     }
 
-    //  Sets a color from sprites pallete to input
+    //  Sets a color from sprites palette to input
     if (tokens[0] == "setcolor") {
         if (tokens.size() < 5) {
             std::cout << "[SPRITE_EDITOR] Not enough arguments!\n";
@@ -490,20 +490,20 @@ void get_command() {
             std::cout << "[SPRITE_EDITOR] Every color value must be an integer lower than 257 and greater or equal to 0.\n";
             continue;
         }
-        current_pallete[color_id] = temp;
+        current_palette[color_id] = temp;
         std::cout << "[SPRITE_EDITOR] Successfully set color no. " << color_id << " to: ";
         std::cout << "\x1b[38;2;";
-        std::cout << current_pallete[color_id].r << ';';
-        std::cout << current_pallete[color_id].g << ';';
-        std::cout << current_pallete[color_id].b << "m#\n";
+        std::cout << current_palette[color_id].r << ';';
+        std::cout << current_palette[color_id].g << ';';
+        std::cout << current_palette[color_id].b << "m#\n";
         reset_color();
         continue;
     }
 
-    if (tokens[0] == "createpallete") {
+    if (tokens[0] == "createpalette") {
         if (tokens.size() < 2) {
             std::cout << "[SPRITE_EDITOR] Not enough arguments!\n";
-            std::cout << "[SPRITE_EDITOR] Arguments for createpallete are: name\n";
+            std::cout << "[SPRITE_EDITOR] Arguments for createpalette are: name\n";
             continue;
         } 
         std::ofstream out(crdir + tokens[1]);
@@ -515,45 +515,45 @@ void get_command() {
         if (confirm_unsaved()) {
             COLOR default_color = { 255, 0, 0 };
             for (int i = 0; i < MAXNROFCOLORS; i++) 
-                current_pallete[i] = default_color;
+                current_palette[i] = default_color;
         }
-        pallete_dir = crdir + tokens[1];
-        std::cout << "[SPRITE_EDITOR] Successfully created new pallete with path: " << crdir + tokens[1] << '\n';
+        palette_dir = crdir + tokens[1];
+        std::cout << "[SPRITE_EDITOR] Successfully created new palette with path: " << crdir + tokens[1] << '\n';
         continue;
     }
 
-    if (tokens[0] == "savepallete") {
+    if (tokens[0] == "savepalette") {
         if (tokens.size() < 2) {
             std::cout << "[SPRITE_EDITOR] Not enough arguments!\n";
-            std::cout << "[SPRITE_EDITOR] Arguments for savepallete are: nr of colors\n";
+            std::cout << "[SPRITE_EDITOR] Arguments for savepalette are: nr of colors\n";
             continue;
         }
-        int pallete_size = stoi(tokens[1]);
-        if (pallete_size < 0 || pallete_size > MAXNROFCOLORS) {
+        int palette_size = stoi(tokens[1]);
+        if (palette_size < 0 || palette_size > MAXNROFCOLORS) {
             std::cout << "[SPRITE_EDITOR] Invalid nr of colors.\n";
             std::cout << "[SPRITE_EDITOR] Nr of colors must be a integer lower than " << MAXNROFCOLORS << "and greater or equal than 0.";
             continue;
         }
-        std::string save_path = pallete_dir.empty() ? (crdir + "pallete.txt") : pallete_dir;
+        std::string save_path = palette_dir.empty() ? (crdir + "palette.txt") : palette_dir;
         std::ofstream out(save_path);
         if (!out.is_open()) {
             std::cout << "[SPRITE_EDITOR] Couldn't open file " << save_path << '\n';
             continue;
         }
-        out << pallete_size << ' ';
-        for (int i = 0; i < pallete_size; i++) {
-            out << current_pallete[i].r << ' ';
-            out << current_pallete[i].g << ' ';
-            out << current_pallete[i].b << ' ';
+        out << palette_size << ' ';
+        for (int i = 0; i < palette_size; i++) {
+            out << current_palette[i].r << ' ';
+            out << current_palette[i].g << ' ';
+            out << current_palette[i].b << ' ';
         }
-        std::cout << "[SPRITE_EDITOR] Pallete was successfully saved at " << save_path << '\n';
+        std::cout << "[SPRITE_EDITOR] Palette was successfully saved at " << save_path << '\n';
         continue;
     }
 
-    if (tokens[0] == "loadpallete") {
+    if (tokens[0] == "loadpalette") {
         if (tokens.size() < 2) {
             std::cout << "[SPRITE_EDITOR] Not enough arguments!\n";
-            std::cout << "[SPRITE_EDITOR] Arguments for loadpallete are: name\n";
+            std::cout << "[SPRITE_EDITOR] Arguments for loadpalette are: name\n";
             continue;
         }
         std::ifstream in(crdir + tokens[1]);
@@ -561,47 +561,47 @@ void get_command() {
             std::cout << "[SPRITE_EDITOR] Couldn't open file " << crdir + tokens[1] << '\n';
             continue;
         }
-        int pallete_size;
-        in >> pallete_size;
-        if (pallete_size < 0 || pallete_size > MAXNROFCOLORS) {
+        int palette_size;
+        in >> palette_size;
+        if (palette_size < 0 || palette_size > MAXNROFCOLORS) {
             std::cout << "[SPRITE_EDITOR] Invalid nr of colors.\n";
             std::cout << "[SPRITE_EDITOR] Nr of colors must be a integer lower than " << MAXNROFCOLORS << "and greater or equal than 0.";
             continue;
         }
-        for (int i = 0; i < pallete_size; i++) {
+        for (int i = 0; i < palette_size; i++) {
             int r, g, b;
             in >> r >> g >> b;
             if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
-                std::cout << "[SPRITE_EDITOR] Invalid color in pallete file.\n"; 
+                std::cout << "[SPRITE_EDITOR] Invalid color in palette file.\n"; 
                 std::cout << "[SPRITE_EDITOR] Every color value must be an integer lower than 256 and greater or equal to 0.\n";
                 continue;
             }
-            current_pallete[i] = {r, g, b};
+            current_palette[i] = {r, g, b};
         }  
         in.close();
-        std::cout << "[SPRITE_EDITOR] Successfully loaded pallete from " << crdir + tokens[1] << '\n';
+        std::cout << "[SPRITE_EDITOR] Successfully loaded palette from " << crdir + tokens[1] << '\n';
     }
 
 
-    if (tokens[0] == "applypallete") {
+    if (tokens[0] == "applypalette") {
         if (tokens.size() < 2) {
             std::cout << "[SPRITE_EDITOR] Not enough arguments!\n";
-            std::cout << "[SPRITE_EDITOR] Arguments for savepallete are: nr of colors\n";
+            std::cout << "[SPRITE_EDITOR] Arguments for savepalette are: nr of colors\n";
             continue;
         }
-        int pallete_size = stoi(tokens[1]);
-        if (pallete_size < 0 || pallete_size > MAXNROFCOLORS) {
+        int palette_size = stoi(tokens[1]);
+        if (palette_size < 0 || palette_size > MAXNROFCOLORS) {
             std::cout << "[SPRITE_EDITOR] Invalid nr of colors.\n";
             std::cout << "[SPRITE_EDITOR] Nr of colors must be a integer lower than " << MAXNROFCOLORS << "and greater or equal than 0.";
             continue;
         }
-        for (int i = 0; i < pallete_size; i++) {
-            canvas->get_srenderer().pallete[i] = current_pallete[i];
-            brush.get_srenderer().pallete[i] = current_pallete[i];
+        for (int i = 0; i < palette_size; i++) {
+            canvas->get_srenderer().palette[i] = current_palette[i];
+            brush.get_srenderer().palette[i] = current_palette[i];
         }
         canvas->refresh();
         brush.refresh();
-        std::cout << "[SPRITE_RENDERER] Successfully applied changes to pallete.\n";
+        std::cout << "[SPRITE_RENDERER] Successfully applied changes to palette.\n";
         continue;
     }
 
@@ -624,8 +624,8 @@ void get_command() {
     brush.set_coords(0, 0);
     brush.show();
 
-    unsigned int font_h = round((double) window.screen_size.y / FONT_RATIO_HEIGHT);
-    unsigned int font_w = round((double) window.screen_size.x / FONT_RATIO_LENGTH);
+    unsigned int font_h = (double) (window.screen_size.y / FONT_RATIO_HEIGHT);
+    unsigned int font_w = (double) (window.screen_size.x / FONT_RATIO_LENGTH);
     window.set_font_settings(font_h, font_w);
     std::cout << "\x1b[2J\x1b[H" << std::flush;
 }
@@ -799,11 +799,12 @@ void loop () {
 
     window.empty_keys();
 
-    // Animation fix: always advance animation if active
     if (canvas->get_animation().is_animation_active) {
         canvas->next_game_tick();
         canvas->refresh();
     }
+
+    Sleep(1);
 }
 
 //   ________
@@ -822,7 +823,7 @@ int main() {
     brush.sprite_init();
     brush.transparent_space(false);
     for (int i = 0; i < brush.get_srenderer().nr_of_colors; i++) 
-        brush.get_srenderer().pallete[i] = {255, 0, 0};
+        brush.get_srenderer().palette[i] = {255, 0, 0};
     brush.frames[0][0][0].character = '#';
     brush.frames[0][0][0].color_id = 0;
     brush.refresh();
@@ -834,7 +835,7 @@ int main() {
     clipboard.hide();
     clipboard.sprite_init();
     for (int i = 0; i < clipboard.get_srenderer().nr_of_colors; i++) 
-        clipboard.get_srenderer().pallete[i] = {255, 0, 0};
+        clipboard.get_srenderer().palette[i] = {255, 0, 0};
 
     //  Selection
     selection_s.set_nr_of_frames(1);
@@ -843,7 +844,7 @@ int main() {
     selection_s.frame_size.x = WINDOWLENGTH;
     selection_s.hide();
     selection_s.sprite_init();
-    selection_s.get_srenderer().pallete[0] = {100, 100, 100};
+    selection_s.get_srenderer().palette[0] = {100, 100, 100};
 
     //  Canvas
     canvas->set_stage(0);
@@ -851,10 +852,10 @@ int main() {
     canvas->set_nr_of_frames(1);
     canvas->sprite_init();
 
-    //  Current pallete initialisation
+    //  Current palette initialisation
     COLOR default_color = { 255, 0, 0 };
     for (int i = 0; i < MAXNROFCOLORS; i++) 
-        current_pallete[i] = default_color;
+        current_palette[i] = default_color;
 
     window.add_sprite_to_renderer(&brush);
     window.add_sprite_to_renderer(&selection_s);

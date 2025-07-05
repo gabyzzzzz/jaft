@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include "pch.h"
 #include "jaft.h"
 
@@ -61,8 +62,8 @@ void jaft::Sprite::init_by_file(const char file_name[]) {
         if (!in.is_open()) log(401, label);
         if (!(in >> frame_size.y >> frame_size.x >> animation.nr_of_frames >> renderer.nr_of_colors)) log(402, label);
         if (frame_size.y < 1 || frame_size.x < 1 || animation.nr_of_frames < 1 || renderer.nr_of_colors < 1) log(403, label);
-        renderer.pallete = new COLOR[renderer.nr_of_colors];
-        for (int i = 0; i < renderer.nr_of_colors; i++) in >> renderer.pallete[i].r >> renderer.pallete[i].g >> renderer.pallete[i].b;
+        renderer.palette = new COLOR[renderer.nr_of_colors];
+        for (int i = 0; i < renderer.nr_of_colors; i++) in >> renderer.palette[i].r >> renderer.palette[i].g >> renderer.palette[i].b;
         unsigned int nrf = animation.nr_of_frames;
         frames = new CELL * *[nrf];
         for (unsigned int f = 0; f < nrf; f++) {
@@ -92,9 +93,9 @@ void jaft::Sprite::sprite_init() {
         unsigned int nfr = animation.nr_of_frames;
         POINT_e fsz = frame_size;
         frames = new CELL * *[nfr];
-        renderer.pallete = new COLOR[renderer.nr_of_colors];
+        renderer.palette = new COLOR[renderer.nr_of_colors];
         for (int i = 0; i < renderer.nr_of_colors; i++) {
-            renderer.pallete[i] = { 255, 0, 0 };
+            renderer.palette[i] = { 255, 0, 0 };
         }
         for (unsigned int f = 0; f < nfr; f++) {
             frames[f] = new CELL * [fsz.y + 1];
@@ -143,7 +144,7 @@ jaft::Sprite::~Sprite() {
     delete[] renderer.cursor_hops.indexes;
     delete[] renderer.cursor_hops.size;
 
-    delete[] renderer.pallete;
+    delete[] renderer.palette;
 }
 
 jaft::Sprite::Sprite() = default;
@@ -299,7 +300,7 @@ void jaft::Sprite::color_to_string(jaft::COLOR clr, char* target) {
     target[11] = 'm';
 }
 
-void jaft::Sprite::refresh_render_code(COLOR pallete_[], int target_frame)
+void jaft::Sprite::refresh_render_code(COLOR palette_[], int target_frame)
 {
     char ansi_clr[] = "\x1b[38;2;";
     bool consecutive, different_lines;
@@ -310,7 +311,7 @@ void jaft::Sprite::refresh_render_code(COLOR pallete_[], int target_frame)
         if (renderer.colored_chunks.size[c][target_frame] > 0) {
             memcpy(renderer.value[target_frame] + renderer.size[target_frame], ansi_clr, 7);
             renderer.size[target_frame] += 7;
-            color_to_string(pallete_[c], renderer.value[target_frame] + renderer.size[target_frame]);
+            color_to_string(palette_[c], renderer.value[target_frame] + renderer.size[target_frame]);
             renderer.size[target_frame] += 12;
             cursor_hop(
                 target_frame,
@@ -345,10 +346,10 @@ bool jaft::Sprite::is_colliding(const jaft::Sprite& sprite, const char character
     if (!is_colliding(sprite)) return false;
     if (sz < 1) log(702, label);
     if (!characters) log(702, label);
-    unsigned int x_start = max(coords.x, sprite.coords.x);
-    unsigned int x_end = min(coords.x + frame_size.x, sprite.coords.x + sprite.frame_size.x);
-    unsigned int y_start = max(coords.y, sprite.coords.y);
-    unsigned int y_end = min(coords.y + frame_size.y, sprite.coords.y + sprite.frame_size.y);
+    unsigned int x_start = std::max(coords.x, sprite.coords.x);
+    unsigned int x_end = std::min(coords.x + frame_size.x, sprite.coords.x + sprite.frame_size.x);
+    unsigned int y_start = std::max(coords.y, sprite.coords.y);
+    unsigned int y_end = std::min(coords.y + frame_size.y, sprite.coords.y + sprite.frame_size.y);
     for (unsigned int i = y_start; i < y_end; i++) {
         for (unsigned int j = x_start; j < x_end; j++) {
             char current_pixel = sprite.frames[sprite.animation.current_frame][i - sprite.coords.y][j - sprite.coords.x].character;
@@ -403,7 +404,7 @@ inline void jaft::Sprite::cursor_hop(int target_frame, unsigned int x, unsigned 
 
 void jaft::Sprite::refresh() {
     for (unsigned int i = 0; i < animation.nr_of_frames; i++)
-        refresh_render_code(renderer.pallete, i);
+        refresh_render_code(renderer.palette, i);
     status.modified = true;
     status.coord_changed = true;
 }

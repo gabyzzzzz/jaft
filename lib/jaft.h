@@ -77,7 +77,7 @@ struct COLOREDCHUNKS {
 struct SRENDERER {
     size_t nr_of_colors = MAXNROFCOLORS;
     size_t* size = nullptr;
-    COLOR* pallete = nullptr;
+    COLOR* palette = nullptr;
     char** value = nullptr;
     COLOREDCHUNKS colored_chunks;
     CURSORHOPS cursor_hops;
@@ -97,7 +97,7 @@ private:
     inline void cursor_hop(int target_frame, unsigned int x, unsigned int y);
     void color_to_string(COLOR clr, char* target);
     char cursor_pos_placeholder[10] = "\x1b[00;000H";
-    void refresh_render_code(COLOR pallete_[], int target_frame);
+    void refresh_render_code(COLOR palette_[], int target_frame);
     POINT_e coords;
     ANIMATION animation;
     VIEW view;
