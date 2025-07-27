@@ -343,6 +343,7 @@ inline void jaft::Window::inject_cursor_coords(const Sprite& sprite, int travers
 
 inline void jaft::Window::print_buffer() {
     _write(1, buffer.value, buffer.size);
+    Sleep(FPSCAP);
 }
 
 inline void jaft::Window::render_all(int c_index, int traversed) {

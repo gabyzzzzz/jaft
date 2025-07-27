@@ -32,7 +32,7 @@ constexpr auto FONT_RATIO_LENGTH = 139.636363;
 
 constexpr auto MAXNROFSPRITES = 1000;
 constexpr auto BUFFERMULTIPLIER = 29;
-//constexpr auto FPSCAP = 300;
+constexpr auto FPSCAP = 1;
 constexpr auto MAXNROFCOLORS = 32;
 
 constexpr int_64 MAXSETBIT = (1ULL << 63);
