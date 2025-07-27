@@ -20,6 +20,7 @@
 #include <sstream>
 #include <io.h>
 #include <fcntl.h>
+#include <chrono>
 #include "jaft.h"
 
 #endif 

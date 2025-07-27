@@ -1,8 +1,7 @@
 #include "libraries.h"
-#include "defines.h"
-#include "classes.h"
+#include "../lib/jaft.h"
 
-void Scene::clean() {
+void jaft::Scene::clean() {
     unsigned int rmv = 0;
     unsigned int next_valid = 0;
     for (unsigned int i = 0; i < nr_of_sprites; i++) {
@@ -12,35 +11,33 @@ void Scene::clean() {
                 sprites[i] = nullptr;
             }
             next_valid++;
-        } else rmv++;
+        }
+        else rmv++;
     }
     nr_of_sprites -= rmv;
 }
 
-void Scene::hide_scene() {
-    //Face fiecare sprite din scena invizibil
+void jaft::Scene::hide_scene() {
     for (unsigned int i = 0; i < nr_of_sprites; i++)
         sprites[i]->hide();
 }
 
-void Scene::show_scene() {
-    //Face fiecare sprite din scena vizibil
+void jaft::Scene::show_scene() {
     for (unsigned int i = 0; i < nr_of_sprites; i++)
         sprites[i]->show();
 }
 
-void Scene::add_sprite(Sprite* sprite) {
-    if (MAXNROFSPRITES <= nr_of_sprites + 1) 
+void jaft::Scene::add_sprite(Sprite* sprite) {
+    if (MAXNROFSPRITES <= nr_of_sprites + 1)
         log(309, sprite->label);
     sprites[nr_of_sprites] = sprite;
     nr_of_sprites++;
 }
 
-void Scene::add_sprites(Sprite** s1, unsigned int sz) {
-    //Adauga mai multe sprite-uri in scena
+void jaft::Scene::add_sprites(Sprite** s1, unsigned int sz) {
     if (sz < 1) log(802);
     if (!s1) log(802);
-    if (MAXNROFSPRITES <= nr_of_sprites + sz) 
+    if (MAXNROFSPRITES <= nr_of_sprites + sz)
         log(309, s1[0]->label);
     for (unsigned int i = 0; i < sz; i++) {
         if (!s1[i]) log(802);
@@ -49,8 +46,7 @@ void Scene::add_sprites(Sprite** s1, unsigned int sz) {
     nr_of_sprites += sz;
 }
 
-void Scene::remove_sprites(Sprite** s1, unsigned int sz) {
-    //Sterge mai multe sprite-uri dupa pointer
+void jaft::Scene::remove_sprites(Sprite** s1, unsigned int sz) {
     if (sz < 1) log(802);
     if (!s1) log(802);
     for (unsigned int i = 0; i < nr_of_sprites; i++) {
@@ -64,12 +60,11 @@ void Scene::remove_sprites(Sprite** s1, unsigned int sz) {
     clean();
 }
 
-void Scene::init_by_file(const char file_name[]) {
-    //Realoca si initializeaza memoria, folosind path-urile din fisier
+void jaft::Scene::init_by_file(const char file_name[]) {
     std::ifstream in(file_name);
-    if(!in.is_open()) log(301);
+    if (!in.is_open()) log(301);
     if (!(in >> nr_of_sprites)) log(302);
-    sprites = new Sprite*[nr_of_sprites];
+    sprites = new Sprite * [nr_of_sprites];
     for (unsigned int i = 0; i < nr_of_sprites; i++) {
         char temp[100];
         if (!(in >> temp)) log(302);
@@ -78,20 +73,18 @@ void Scene::init_by_file(const char file_name[]) {
     }
 }
 
-void Scene::set_nr_of_sprites(unsigned int nr) {
-    //Realoca memorie pentru sprite-uri
+void jaft::Scene::set_nr_of_sprites(unsigned int nr) {
     if (nr_of_sprites) {
         for (unsigned int i = 0; i < nr_of_sprites; i++) sprites[i] = nullptr;
         delete[] sprites;
         sprites = nullptr;
     }
-    sprites = new Sprite*[nr];
+    sprites = new Sprite * [nr];
     for (unsigned int i = 0; i < nr; i++) sprites[i] = nullptr;
     nr_of_sprites = nr;
 }
 
-void Scene::remove_sprite(Sprite* sprite) {
-    //Sterge pointer-ul dat din vectorul cu sprite-uri
+void jaft::Scene::remove_sprite(Sprite* sprite) {
     for (unsigned int i = 0; i < nr_of_sprites; i++)
         if (sprites[i] == sprite) {
             sprites[i] = nullptr;
@@ -100,17 +93,15 @@ void Scene::remove_sprite(Sprite* sprite) {
     clean();
 }
 
-void Scene::remove_sprites(std::function<bool(Sprite*)> condition) {
-    //Sterge pointerii sprite-urilor care respecta conditia
+void jaft::Scene::remove_sprites(std::function<bool(Sprite*)> condition) {
     unsigned int rmv = 0;
-    for (unsigned int i = 0; i < nr_of_sprites; i++) 
-        if (condition(sprites[i])) 
+    for (unsigned int i = 0; i < nr_of_sprites; i++)
+        if (condition(sprites[i]))
             sprites[i] = nullptr;
     clean();
 }
 
-Scene::~Scene() {
-    //Memoria alocata dinamic este eliberata (De modificat daca folosim mai multa). Destructorul nu va sterge Sprite-urile in sine, ci doar pointerele catre ele. Sa se foloseasca delete_sprite daca memoria este initializata de Scena
+jaft::Scene::~Scene() {
     if (sprites) {
         for (unsigned int i = 0; i < nr_of_sprites; i++) sprites[i] = nullptr;
         delete[] sprites;
@@ -118,8 +109,7 @@ Scene::~Scene() {
     }
 }
 
-void Scene::remove_all_sprites() {
-    //Sa fie folosit cand memoria este initializata de clasa Scena. Daca este doar partial initializata de Scena, sa se creeze o functie separata
+void jaft::Scene::remove_all_sprites() {
     if (nr_of_sprites) {
         for (unsigned int i = 0; i < nr_of_sprites; i++) {
             delete sprites[i];
@@ -130,8 +120,7 @@ void Scene::remove_all_sprites() {
     }
 }
 
-Scene& Scene::operator=(const Scene& obj1)  {
-    //Returneaza primul obiect din operatie
+jaft::Scene& jaft::Scene::operator=(const Scene& obj1) {
     if (this == &obj1) return *this;
     set_nr_of_sprites(obj1.nr_of_sprites);
     for (unsigned int i = 0; i < nr_of_sprites; i++)
@@ -139,8 +128,7 @@ Scene& Scene::operator=(const Scene& obj1)  {
     return *this;
 }
 
-void Scene::DEBUG_scene() {
-    //Printeaza pe consola fiecare sprite
+void jaft::Scene::DEBUG_scene() {
     for (unsigned int i = 0; i < nr_of_sprites; i++) {
         if (sprites[i] == nullptr) std::cout << "nullptr\n\n";
         else {
@@ -150,8 +138,8 @@ void Scene::DEBUG_scene() {
     }
 }
 
-Scene::Scene(const char file_name[]) {
+jaft::Scene::Scene(const char file_name[]) {
     init_by_file(file_name);
 }
 
-Scene::Scene() = default;
+jaft::Scene::Scene() = default;

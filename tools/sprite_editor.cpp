@@ -5,7 +5,6 @@
 //       ____________________________________________
 //      | FEEL FREE TO USE THIS FOR TESTING PURPOSES |
 
-#define NOMINMAX
 #include "../lib/jaft.h"
 #include <vector>
 #include <deque>
@@ -688,10 +687,10 @@ void loop () {
             selection_s.hide();
             brush.show();
             rectangle cpy = {
-                std::min(selection.x1, selection.x2), 
-                std::min(selection.y1, selection.y2), 
-                std::max(selection.x1, selection.x2), 
-                std::max(selection.y1, selection.y2)
+                (std::min)(selection.x1, selection.x2), 
+                (std::min)(selection.y1, selection.y2), 
+                (std::max)(selection.x1, selection.x2), 
+                (std::max)(selection.y1, selection.y2)
             };
             //  Empty clipboard
             for (int y = 0; y < WINDOWHEIGHT; y++) 
@@ -713,9 +712,9 @@ void loop () {
                     canvas->frames[canvas->get_animation().current_frame][y][x].character = ' ';
                     mods.push_back(p1);
                 }
+                canvas->refresh();
                 push_undo(mods);
             }
-            Sleep(2000);
             //  Turn off selection mode
             s_mode = 0;
         } else {
@@ -732,6 +731,7 @@ void loop () {
     }
 
     if (input.count('x')) {
+        brush.hide();
         s_mode = 2;
         selection_s.show();
         selection = {
@@ -779,10 +779,10 @@ void loop () {
     //  Mark rectangle selected
     if (s_mode) {
         rectangle tmp = {
-            std::min(selection.x1, selection.x2), 
-            std::min(selection.y1, selection.y2), 
-            std::max(selection.x1, selection.x2), 
-            std::max(selection.y1, selection.y2)
+            (std::min)(selection.x1, selection.x2), 
+            (std::min)(selection.y1, selection.y2), 
+            (std::max)(selection.x1, selection.x2), 
+            (std::max)(selection.y1, selection.y2)
         };
         for (int y = 0; y < selection_s.frame_size.y; y++) {
             for (int x = 0; x < selection_s.frame_size.x; x++) {
@@ -847,6 +847,7 @@ int main() {
     selection_s.get_srenderer().palette[0] = {100, 100, 100};
 
     //  Canvas
+    canvas->transparent_space(false);
     canvas->set_stage(0);
     canvas->frame_size = {WINDOWLENGTH, WINDOWHEIGHT};
     canvas->set_nr_of_frames(1);

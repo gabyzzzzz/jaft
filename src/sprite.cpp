@@ -1,105 +1,73 @@
-#define NOMINMAX
-#include "classes.h"
 #include "libraries.h"
-#include "defines.h"
+#include "../lib/jaft.h"
 
-//   ________________________________________________________
-//  | ALOCATING MEMORY / CONSTRUCTORS / INITIALISING THINGS |
-
-//  Made this to not repeat myself
-void Sprite::alocate_memory() {
-    //  We are alocating memory for the render code of the sprite
+void jaft::Sprite::alocate_memory() {
     try {
 
-    renderer.value = new char*[animation.nr_of_frames];
-    for (int i = 0; i < animation.nr_of_frames; i++) renderer.value[i] = new char[BUFFERMULTIPLIER * frame_size.x * frame_size.y + 2];
-    renderer.size = new size_t[animation.nr_of_frames];
-    for (int i = 0; i < animation.nr_of_frames; i++) renderer.size[i] = 0;
-    //  Alocate memory for colored chunks
-    renderer.colored_chunks.container = new SBIT**[renderer.nr_of_colors];
-    for (int i = 0; i < renderer.nr_of_colors; i++) {
-        renderer.colored_chunks.container[i] = new SBIT*[animation.nr_of_frames];
-        for (int j = 0; j < animation.nr_of_frames; j++) renderer.colored_chunks.container[i][j] = new SBIT[frame_size.x * frame_size.y + 2];
-    }
-    renderer.colored_chunks.size = new size_t*[renderer.nr_of_colors];
-    for (int i = 0; i < renderer.nr_of_colors; i++) renderer.colored_chunks.size[i] = new size_t[animation.nr_of_frames];
-    for (int i = 0; i < renderer.nr_of_colors; i++) {
-        for (int j = 0; j < animation.nr_of_frames; j++) {
-            renderer.colored_chunks.size[i][j] = 0;
+        renderer.value = new char* [animation.nr_of_frames];
+        for (unsigned int i = 0; i < animation.nr_of_frames; i++) renderer.value[i] = new char[BUFFERMULTIPLIER * frame_size.x * frame_size.y + 2];
+        renderer.size = new size_t[animation.nr_of_frames];
+        for (unsigned int i = 0; i < animation.nr_of_frames; i++) renderer.size[i] = 0;
+        renderer.colored_chunks.container = new SBIT** [renderer.nr_of_colors];
+        for (unsigned int i = 0; i < renderer.nr_of_colors; i++) {
+            renderer.colored_chunks.container[i] = new SBIT* [animation.nr_of_frames];
+            for (unsigned int j = 0; j < animation.nr_of_frames; j++) renderer.colored_chunks.container[i][j] = new SBIT[frame_size.x * frame_size.y + 2];
         }
-    }
-    //  Alocate memory for cursor hops
-    renderer.cursor_hops.size = new size_t[animation.nr_of_frames];
-    for (int i = 0; i < animation.nr_of_frames; i++) renderer.cursor_hops.size[i] = 0;
-    renderer.cursor_hops.indexes = new int*[animation.nr_of_frames];
-    renderer.cursor_hops.values = new POINT_e*[animation.nr_of_frames];
-    for (int i = 0; i < animation.nr_of_frames; i++) {
-        renderer.cursor_hops.indexes[i] = new int[frame_size.x * frame_size.y + 2];
-        renderer.cursor_hops.values[i] = new POINT_e[frame_size.x * frame_size.y + 2];
-    }
-
-    }
-
-    catch (const std::bad_alloc& e) {
-        std::cout << "[JAFT] Failed alocating memory for sprite with label " << label << ". " << e.what() << std::endl;
-    }
-    
-    previous_pos = {{1, 1}, {0, 0}};
-    refresh();
-}
-
-void Sprite::init_by_file(const char file_name[]) {
-    try {
-
-    std::ifstream in(file_name);
-    //  Check if file is open and the first values are valid.
-    if (!in.is_open()) log(401, label);
-    if (!(in >> frame_size.y >> frame_size.x >> animation.nr_of_frames >> renderer.nr_of_colors)) log(402, label);
-    if (frame_size.y < 1 || frame_size.x < 1 || animation.nr_of_frames < 1 || renderer.nr_of_colors < 1) log(403, label);
-    //  Alocating and setting the values for palette.
-    renderer.palette = new COLOR[renderer.nr_of_colors];
-    for (int i = 0; i < renderer.nr_of_colors; i++) in >> renderer.palette[i].r >> renderer.palette[i].g >> renderer.palette[i].b;
-    //  We are reading the characters and color ids while also alocating memory
-    unsigned int nrf = animation.nr_of_frames;
-    frames = new CELL**[nrf];
-    for (unsigned int f = 0; f < nrf; f++) {
-        frames[f] = new CELL*[frame_size.y + 1];
-        for (unsigned int h = 0; h < frame_size.y; h++) {
-            frames[f][h] = new CELL[frame_size.x + 1]; 
-            for (unsigned int w = 0; w < frame_size.x; w++) {
-                int ch; 
-                in >> frames[f][h][w].color_id >> ch;
-                frames[f][h][w].character = (char) ch;
+        renderer.colored_chunks.size = new size_t* [renderer.nr_of_colors];
+        for (unsigned int i = 0; i < renderer.nr_of_colors; i++) renderer.colored_chunks.size[i] = new size_t[animation.nr_of_frames];
+        for (unsigned int i = 0; i < renderer.nr_of_colors; i++) {
+            for (unsigned int j = 0; j < animation.nr_of_frames; j++) {
+                renderer.colored_chunks.size[i][j] = 0;
+            }
+        }
+        renderer.cursor_hops.size = new size_t[animation.nr_of_frames];
+        for (unsigned int i = 0; i < animation.nr_of_frames; i++) renderer.cursor_hops.size[i] = 0;
+        renderer.cursor_hops.indexes = new int* [animation.nr_of_frames];
+        renderer.cursor_hops.values = new POINT_e* [animation.nr_of_frames];
+        for (unsigned int i = 0; i < animation.nr_of_frames; i++) {
+            renderer.cursor_hops.indexes[i] = new int[frame_size.x * frame_size.y + 2];
+            renderer.cursor_hops.values[i] = new POINT_e[frame_size.x * frame_size.y + 2];
+        }
+        bitmask = new int_64**[animation.nr_of_frames];
+        int size_bitmask_x = (frame_size.x + 63) / 64;
+        for (int i = 0; i < animation.nr_of_frames; i++) {
+            bitmask[i] = new int_64*[frame_size.y];
+            for (int j = 0; j < frame_size.y; j++) {
+                bitmask[i][j] = new int_64[size_bitmask_x];
+                for (int k = 0; k < size_bitmask_x; k++) bitmask[i][j][k] = 0;
             }
         }
     }
 
-    }
-
     catch (const std::bad_alloc& e) {
         std::cout << "[JAFT] Failed alocating memory for sprite with label " << label << ". " << e.what() << std::endl;
     }
 
-    alocate_memory();
+    refresh();
 }
 
-void Sprite::sprite_init() {
+void jaft::Sprite::init_by_file(const char file_name[]) {
     try {
 
-    unsigned int nfr = animation.nr_of_frames;
-    POINT_e fsz = frame_size;
-    frames = new CELL**[nfr];
-    renderer.palette = new COLOR[renderer.nr_of_colors];
-    for (int i = 0; i < renderer.nr_of_colors; i++) {
-        renderer.palette[i] = {255, 0, 0};
-    }
-    for (unsigned int f = 0; f < nfr; f++) {
-        frames[f] = new CELL*[fsz.y + 1];
-        for (unsigned int h = 0; h < fsz.y; h++) {
-            frames[f][h] = new CELL[fsz.x + 1];
-            for (unsigned int w = 0; w < fsz.x; w++) frames[f][h][w] = {0, ' '};
+        std::ifstream in(file_name);
+        if (!in.is_open()) log(401, label);
+        if (!(in >> frame_size.y >> frame_size.x >> animation.nr_of_frames >> renderer.nr_of_colors)) log(402, label);
+        if (frame_size.y < 1 || frame_size.x < 1 || animation.nr_of_frames < 1 || renderer.nr_of_colors < 1) log(403, label);
+        renderer.palette = new COLOR[renderer.nr_of_colors];
+        for (int i = 0; i < renderer.nr_of_colors; i++) in >> renderer.palette[i].r >> renderer.palette[i].g >> renderer.palette[i].b;
+        unsigned int nrf = animation.nr_of_frames;
+        frames = new CELL * *[nrf];
+        for (unsigned int f = 0; f < nrf; f++) {
+            frames[f] = new CELL * [frame_size.y + 1];
+            for (unsigned int h = 0; h < frame_size.y; h++) {
+                frames[f][h] = new CELL[frame_size.x + 1];
+                for (unsigned int w = 0; w < frame_size.x; w++) {
+                    int ch;
+                    in >> frames[f][h][w].color_id >> ch;
+                    frames[f][h][w].character = (char)ch;
+                }
+            }
         }
-    }
 
     }
 
@@ -110,13 +78,37 @@ void Sprite::sprite_init() {
     alocate_memory();
 }
 
-//  Destructor
-Sprite::~Sprite () {
-    //  Stuff for loops
+void jaft::Sprite::sprite_init() {
+    try {
+
+        unsigned int nfr = animation.nr_of_frames;
+        POINT_e fsz = frame_size;
+        frames = new CELL * *[nfr];
+        renderer.palette = new COLOR[renderer.nr_of_colors];
+        for (int i = 0; i < renderer.nr_of_colors; i++) {
+            renderer.palette[i] = { 255, 0, 0 };
+        }
+        for (unsigned int f = 0; f < nfr; f++) {
+            frames[f] = new CELL * [fsz.y + 1];
+            for (unsigned int h = 0; h < fsz.y; h++) {
+                frames[f][h] = new CELL[fsz.x + 1];
+                for (unsigned int w = 0; w < fsz.x; w++) frames[f][h][w] = { 0, ' ' };
+            }
+        }
+
+    }
+
+    catch (const std::bad_alloc& e) {
+        std::cout << "[JAFT] Failed alocating memory for sprite with label " << label << ". " << e.what() << std::endl;
+    }
+
+    alocate_memory();
+}
+
+jaft::Sprite::~Sprite() {
     unsigned int nfr = animation.nr_of_frames;
     POINT_e fsz = frame_size;
 
-    //  Delete frames
     for (unsigned int f = 0; f < nfr; ++f) {
         for (unsigned int y = 0; y < fsz.y; ++y)
             delete[] frames[f][y];
@@ -124,46 +116,40 @@ Sprite::~Sprite () {
     }
     delete[] frames;
 
-    //  Delete colored chunks
-    for (int i = 0; i < renderer.nr_of_colors; i++) {
-        for (int j = 0; j < animation.nr_of_frames; j++)
+    for (unsigned int i = 0; i < renderer.nr_of_colors; i++) {
+        for (unsigned int j = 0; j < animation.nr_of_frames; j++)
             delete[] renderer.colored_chunks.container[i][j];
-        delete[] renderer.colored_chunks.size[i]; 
-    } 
+        delete[] renderer.colored_chunks.size[i];
+    }
     delete[] renderer.colored_chunks.container;
     delete[] renderer.colored_chunks.size;
-    
-    //  Delete render code
-    for (int i = 0; i < animation.nr_of_frames; i++) {
+
+    for (unsigned int i = 0; i < animation.nr_of_frames; i++) {
         delete[] renderer.value[i];
         delete[] renderer.cursor_hops.indexes[i];
         delete[] renderer.cursor_hops.values[i];
+        for (int j = 0; j < frame_size.y; j++) delete[] bitmask[i][j];
+        delete[] bitmask[i];
     }
     delete[] renderer.value;
     delete[] renderer.size;
     delete[] renderer.cursor_hops.values;
+    delete[] bitmask;
     delete[] renderer.cursor_hops.indexes;
     delete[] renderer.cursor_hops.size;
-    
-    //  This one is lonely
+
     delete[] renderer.palette;
 }
 
-//  Constructors
+jaft::Sprite::Sprite() = default;
 
-Sprite::Sprite() = default;
-
-Sprite::Sprite(const char file_name[], unsigned int lbl) : label(lbl) {
+jaft::Sprite::Sprite(const char file_name[], unsigned int lbl) : label(lbl) {
     init_by_file(file_name);
 }
 
-Sprite::Sprite(unsigned int lbl) : label(lbl) {}
+jaft::Sprite::Sprite(unsigned int lbl) : label(lbl) {}
 
-//   __________________________________________
-//  | DEBUGGING / SHOWING STUFF TO THE CONSOLE |
-
-//  Prints the characters from the raw matrix (a bit outdated but works)
-void Sprite::DEBUG_sprite() {
+void jaft::Sprite::DEBUG_sprite() {
     std::cout << "[DEBUG] Debugging sprite with label " << label << '\n';
     std::cout << frame_size.y << ' ' << frame_size.x << ' ' << animation.nr_of_frames << "\n\n";
     for (unsigned int f = 0; f < animation.nr_of_frames; f++) {
@@ -176,13 +162,13 @@ void Sprite::DEBUG_sprite() {
     std::cout.flush();
 }
 
-//  Prints the render code (frame 1) and cursor hops
-void Sprite::DEBUG_render_code() {
+void jaft::Sprite::DEBUG_render_code() {
     std::cout << "[DEBUG] Render code:\n";
     for (int i = 0; i < renderer.size[animation.current_frame]; i++) {
         if (renderer.value[0][i] == '\x1b') {
             std::cout << "ESC";
-        } else std::cout << renderer.value[0][i];
+        }
+        else std::cout << renderer.value[0][i];
     }
     std::cout << "\n[DEBUG] Cursor hops:\n";
     for (int i = 0; i < renderer.cursor_hops.size[animation.current_frame]; i++) std::cout << renderer.cursor_hops.indexes[animation.current_frame][i] << ' ';
@@ -190,111 +176,91 @@ void Sprite::DEBUG_render_code() {
     std::cout.flush();
 }
 
-//   ______________________
-//  | UTILITIES / FUNCTIONS|
-
-//  TODO : add a sprite lock, where you cut off memory you dont actually use.
-
-POINT_e Sprite::get_coords() const {
+jaft::POINT_e jaft::Sprite::get_coords() const {
     return coords;
 }
 
-void Sprite::set_coords(int x, int y) {
-    int x_ = x + frame_size.x;
-    int y_ = y + frame_size.y;
-    if ((x_ < WINDOWLENGTH && x_ >= 0) && (y_ < WINDOWHEIGHT && y >= 0)) {
-        coords.x = x;
-        coords.y = y;
-    } else {
-        if (x_ >= WINDOWLENGTH) coords.x = WINDOWLENGTH - frame_size.x;
-        if (x_ < 0) coords.x = 0;
-        if (y_ >= WINDOWHEIGHT) coords.y = WINDOWHEIGHT - frame_size.y;
-        if (y_ < 0) coords.y = 0;
-    }
+void jaft::Sprite::set_coords(int x, int y) {
+    int x_end = x + frame_size.x - 1;
+    int y_end = y + frame_size.y - 1;
+    if (x_end >= WINDOWLENGTH) x = WINDOWLENGTH - frame_size.x;
+    if (x < 0) x = 0;
+    if (y_end >= WINDOWHEIGHT) y = WINDOWHEIGHT - frame_size.y;
+    if (y < 0) y = 0;
+    coords.x = x;
+    coords.y = y;
     status.coord_changed = true;
 }
 
-void Sprite::add_x(int x) {
-    int x_ = coords.x + x + frame_size.x;
-    if (x_ < WINDOWLENGTH && x_ >= 0) coords.x = x + coords.x;
-    else {
-        if (x_ >= WINDOWLENGTH) coords.x = WINDOWLENGTH - frame_size.x;
-        if (x_ < 0) coords.x = 0;
-    } 
-    status.coord_changed = true;
+void jaft::Sprite::add_x(int delta_x) {
+    set_coords(coords.x + delta_x, coords.y);
 }
 
-void Sprite::add_y(int y) {
-    int y_ = coords.y + y + frame_size.y;
-    if (y_ < WINDOWHEIGHT && y_ >= 0) coords.y = y + coords.y;
-    else {
-        if (y_ >= WINDOWHEIGHT) coords.y = WINDOWHEIGHT - frame_size.y;
-        if (y_ < 0) coords.y = 0;
-    }
-    status.coord_changed = true;
+void jaft::Sprite::add_y(int delta_y) {
+    set_coords(coords.x, coords.y + delta_y);
 }
 
-ANIMATION Sprite::get_animation() const {
+jaft::ANIMATION jaft::Sprite::get_animation() const {
     return animation;
 }
 
-void Sprite::start_animation() {
+void jaft::Sprite::start_animation() {
     animation.is_animation_active = true;
 }
 
-void Sprite::stop_animation() {
+void jaft::Sprite::stop_animation() {
     animation.is_animation_active = false;
 }
 
-void Sprite::set_current_frame(int frame) {
+void jaft::Sprite::set_current_frame(int frame) {
     animation.current_frame = frame;
     status.modified = true;
 }
 
-void Sprite::set_ticks_per_frame(int ticks_per_frame) {
+void jaft::Sprite::set_ticks_per_frame(int ticks_per_frame) {
     animation.ticks_per_frame = ticks_per_frame;
 }
 
-void Sprite::set_current_tick(int current_tick) {
+void jaft::Sprite::set_current_tick(int current_tick) {
     animation.current_tick = current_tick;
 }
 
-VIEW Sprite::get_view() const {
+jaft::VIEW jaft::Sprite::get_view() const {
     return view;
 }
 
-void Sprite::hide() {
+void jaft::Sprite::hide() {
     status.modified = true;
     view.visible = false;
 }
 
-void Sprite::show() {
+void jaft::Sprite::show() {
     status.modified = true;
     view.visible = true;
 }
 
-void Sprite::transparent_space(bool condition) {
+void jaft::Sprite::transparent_space(bool condition) {
     view.transparent_white_spaces = condition;
     refresh();
 }
 
-void Sprite::set_stage(int z_index) {
+void jaft::Sprite::set_stage(int z_index) {
     view.stage = z_index;
 }
 
-SPRITESTATUS& Sprite::get_status() {
+jaft::SPRITESTATUS& jaft::Sprite::get_status() {
     return status;
 }
 
-void Sprite::set_nr_of_frames(int frames) {
+void jaft::Sprite::set_nr_of_frames(int frames) {
     animation.nr_of_frames = frames;
 }
 
-SRENDERER& Sprite::get_srenderer() {
+jaft::SRENDERER& jaft::Sprite::get_srenderer() {
     return renderer;
 }
 
-void Sprite::color_to_string(COLOR clr, char* target) {
+void jaft::Sprite::color_to_string(jaft::COLOR clr, char* target) {
     for (int i = 2; i >= 0; i--) {
         target[i] = (clr.r % 10) + '0';
         clr.r /= 10;
@@ -312,7 +278,61 @@ void Sprite::color_to_string(COLOR clr, char* target) {
     target[11] = 'm';
 }
 
-bool Sprite::is_colliding(const Sprite& sprite) const {
+void jaft::Sprite::refresh_bitmask(int target_frame) {
+    for (int i = 0; i < frame_size.y; i++) {
+        for (int j = 0; j < (frame_size.x + 63) / 64; j++) {
+            bitmask[target_frame][i][j] = 0;
+        }
+    }
+    int_64** current_bitmask = bitmask[target_frame];
+    CELL** current_frame = frames[target_frame];
+    int_64 set_bit;
+    for (int y = 0; y < frame_size.y; y++) {
+        set_bit = 1;
+        for (int x = 0; x < frame_size.x; x++) {
+            if (current_frame[y][x].character != ' ' || !(view.transparent_white_spaces)) {
+                current_bitmask[y][x / 64] |= set_bit;
+            }
+            if (set_bit == MAXSETBIT) set_bit = 1;
+            else set_bit <<=  1;
+        }
+    }
+}
+
+void jaft::Sprite::refresh_render_code(COLOR palette_[], int target_frame) {
+    char ansi_clr[] = "\x1b[38;2;";
+    bool consecutive, different_lines;
+    renderer.size[target_frame] = 0;
+    renderer.cursor_hops.size[target_frame] = 0;
+    refresh_colored_chunks(target_frame);
+    for (int c = 0; c < renderer.nr_of_colors; c++) {
+        if (renderer.colored_chunks.size[c][target_frame] > 0) {
+            memcpy(renderer.value[target_frame] + renderer.size[target_frame], ansi_clr, 7);
+            renderer.size[target_frame] += 7;
+            color_to_string(palette_[c], renderer.value[target_frame] + renderer.size[target_frame]);
+            renderer.size[target_frame] += 12;
+            cursor_hop(
+                target_frame,
+                renderer.colored_chunks.container[c][target_frame][0].coords.x,
+                renderer.colored_chunks.container[c][target_frame][0].coords.y
+            );
+            renderer.value[target_frame][renderer.size[target_frame]++] = renderer.colored_chunks.container[c][target_frame][0].character;
+        }
+        for (int i = 1; i < renderer.colored_chunks.size[c][target_frame]; i++) {
+            consecutive = renderer.colored_chunks.container[c][target_frame][i - 1].coords.x + 1 == renderer.colored_chunks.container[c][target_frame][i].coords.x;
+            different_lines = renderer.colored_chunks.container[c][target_frame][i - 1].coords.y != renderer.colored_chunks.container[c][target_frame][i].coords.y;
+            if (!consecutive || different_lines)
+                cursor_hop(
+                    target_frame,
+                    renderer.colored_chunks.container[c][target_frame][i].coords.x,
+                    renderer.colored_chunks.container[c][target_frame][i].coords.y
+                );
+            renderer.value[target_frame][renderer.size[target_frame]++] = renderer.colored_chunks.container[c][target_frame][i].character;
+        }
+    }
+}
+
+bool jaft::Sprite::is_colliding(const jaft::Sprite& sprite) const {
     if (coords.x + frame_size.x - 1 < sprite.coords.x) return false;
     if (sprite.coords.x + sprite.frame_size.x - 1 < coords.x) return false;
     if (coords.y + frame_size.y - 1 < sprite.coords.y) return false;
@@ -320,14 +340,14 @@ bool Sprite::is_colliding(const Sprite& sprite) const {
     return true;
 }
 
-bool Sprite::is_colliding(const Sprite& sprite, const char characters[], unsigned int sz) const {
+bool jaft::Sprite::is_colliding(const jaft::Sprite& sprite, const char characters[], unsigned int sz) const {
     if (!is_colliding(sprite)) return false;
     if (sz < 1) log(702, label);
     if (!characters) log(702, label);
-    unsigned int x_start = std::max(coords.x, sprite.coords.x);
-    unsigned int x_end = std::min(coords.x + frame_size.x, sprite.coords.x + sprite.frame_size.x);
-    unsigned int y_start = std::max(coords.y, sprite.coords.y);
-    unsigned int y_end = std::min(coords.y + frame_size.y, sprite.coords.y + sprite.frame_size.y);
+    unsigned int x_start = (std::max)(coords.x, sprite.coords.x);
+    unsigned int x_end = (std::min)(coords.x + frame_size.x, sprite.coords.x + sprite.frame_size.x);
+    unsigned int y_start = (std::max)(coords.y, sprite.coords.y);
+    unsigned int y_end = (std::min)(coords.y + frame_size.y, sprite.coords.y + sprite.frame_size.y);
     for (unsigned int i = y_start; i < y_end; i++) {
         for (unsigned int j = x_start; j < x_end; j++) {
             char current_pixel = sprite.frames[sprite.animation.current_frame][i - sprite.coords.y][j - sprite.coords.x].character;
@@ -341,10 +361,10 @@ bool Sprite::is_colliding(const Sprite& sprite, const char characters[], unsigne
             if (!found) return true;
         }
     }
-    return false; 
+    return false;
 }
 
-void Sprite::next_game_tick() {
+void jaft::Sprite::next_game_tick() {
     animation.current_tick++;
     if (animation.current_tick >= animation.ticks_per_frame) {
         animation.current_tick = 0;
@@ -353,21 +373,16 @@ void Sprite::next_game_tick() {
     }
 }
 
-//   __________________________________________
-//  | RENDERING / COLORED CHUNKS / CURSOR HOPS |
-
-inline void Sprite::refresh_colored_chunks(int target_frame) {
+inline void jaft::Sprite::refresh_colored_chunks(int target_frame) {
     CELL current_cell;
     POINT_e current_coords;
-    //  Set the sizes of the colored chunks to 0
     for (int i = 0; i < renderer.nr_of_colors; i++)
         renderer.colored_chunks.size[i][target_frame] = 0;
-    //  Loop through the character matrix
     for (unsigned int y = 0; y < frame_size.y; y++) {
         for (unsigned int x = 0; x < frame_size.x; x++) {
             current_cell = frames[target_frame][y][x];
             if (current_cell.character != ' ' || view.transparent_white_spaces == false) {
-                current_coords = {x, y};
+                current_coords = { x, y };
                 renderer.colored_chunks.container[current_cell.color_id][target_frame][renderer.colored_chunks.size[current_cell.color_id][target_frame]++] = {
                     current_coords,
                     current_cell.character
@@ -377,58 +392,19 @@ inline void Sprite::refresh_colored_chunks(int target_frame) {
     }
 }
 
-inline void Sprite::cursor_hop(int target_frame, unsigned int x, unsigned int y) {
+inline void jaft::Sprite::cursor_hop(int target_frame, unsigned int x, unsigned int y) {
     renderer.cursor_hops.indexes[target_frame][renderer.cursor_hops.size[target_frame]] = renderer.size[target_frame] + 2;
     renderer.cursor_hops.values[target_frame][renderer.cursor_hops.size[target_frame]] = { x, y };
     renderer.cursor_hops.size[target_frame]++;
-    //  CHANGE - If coords are bigger than triple digits
     memcpy(renderer.value[target_frame] + renderer.size[target_frame], cursor_pos_placeholder, 9);
     renderer.size[target_frame] += 9;
 }
 
-//  Refreshes render code, commiting previous changes made to the sprite (including changing pallete and characters)
-void Sprite::refresh_render_code(COLOR* pallete_, int target_frame) {
-    //  TODO - Maybe replace the overlaping characters with ghost one if you get flickers when two sprites overlap
-    char ansi_clr[] = "\x1b[38;2;";
-    bool consecutive, different_lines;
-    renderer.size[target_frame] = 0;
-    renderer.cursor_hops.size[target_frame] = 0;
-    //  Updating colored chunks
-    refresh_colored_chunks(target_frame);
-    //  Build render code
-    for (int c = 0; c < renderer.nr_of_colors; c++) {
-        //  Grouping same-colored chars together
-        if (renderer.colored_chunks.size[c][target_frame] > 0) {
-            //  Cursor hop on the first character automatically
-            memcpy(renderer.value[target_frame] + renderer.size[target_frame], ansi_clr, 7);
-            renderer.size[target_frame] += 7;
-            color_to_string(pallete_[c], renderer.value[target_frame] + renderer.size[target_frame]);
-            renderer.size[target_frame] += 12;
-            cursor_hop(
-                target_frame, 
-                renderer.colored_chunks.container[c][target_frame][0].coords.x, 
-                renderer.colored_chunks.container[c][target_frame][0].coords.y
-            );
-            renderer.value[target_frame][renderer.size[target_frame]++] = renderer.colored_chunks.container[c][target_frame][0].character;
-        }
-        for (int i = 1; i < renderer.colored_chunks.size[c][target_frame]; i++) {
-            consecutive = renderer.colored_chunks.container[c][target_frame][i - 1].coords.x + 1 == renderer.colored_chunks.container[c][target_frame][i].coords.x;
-            different_lines = renderer.colored_chunks.container[c][target_frame][i - 1].coords.y != renderer.colored_chunks.container[c][target_frame][i].coords.y;
-            //  Cursor hop if characters not consecutive
-            if (!consecutive || different_lines) 
-                cursor_hop(
-                    target_frame,
-                    renderer.colored_chunks.container[c][target_frame][i].coords.x,
-                    renderer.colored_chunks.container[c][target_frame][i].coords.y
-                );
-            renderer.value[target_frame][renderer.size[target_frame]++] = renderer.colored_chunks.container[c][target_frame][i].character;
-        }
-    }
-}
-
-void Sprite::refresh() {
-    for (int i = 0; i < animation.nr_of_frames; i++)
+void jaft::Sprite::refresh() {
+    for (unsigned int i = 0; i < animation.nr_of_frames; i++) {
+        refresh_bitmask(i);
         refresh_render_code(renderer.palette, i);
+    }
     status.modified = true;
     status.coord_changed = true;
 }

@@ -4,6 +4,21 @@
 #include <wincon.h>
 #include <functional>
 #include <unordered_set>
+#include <chrono>
+
+typedef unsigned long long int_64;
+
+/*
+
+JAFT LIBRARY, VERSION 0.2.0, 3TH JULY 2025
+MADE BY G@BY
+
+JAFT IS A LIGHTWEIGHT LIBRARY INTENDED TO BE USED FOR C++ CONSOLE GAMES OR APPLICATIONS THAT USE TEXT BASED USER INTERFACES.
+IT WORKS WITH CUSTOM SPRITE OBJECTS THAT CANNOT BE CREATED WITHOUT PROPER SOFTWARE.
+
+JAFT WAS MADE USING ISO C++14 STANDARD
+
+*/
 
 namespace jaft {
 
@@ -17,8 +32,11 @@ constexpr auto FONT_RATIO_LENGTH = 139.636363;
 
 constexpr auto MAXNROFSPRITES = 1000;
 constexpr auto BUFFERMULTIPLIER = 29;
-constexpr auto FPSCAP = 1;
+//constexpr auto FPSCAP = 300;
 constexpr auto MAXNROFCOLORS = 32;
+
+constexpr int_64 MAXSETBIT = (1ULL << 63);
+constexpr int global_bitmask_groups = (WINDOWLENGTH + 63) / 64;
 
 void log(int err_code, int sprite_label = -1);
 
@@ -83,10 +101,6 @@ struct SRENDERER {
     CURSORHOPS cursor_hops;
 };
 
-struct PREVS {
-    POINT_e upper_left, lower_right;
-};
-
 //  Class declarations
 
 class Sprite
@@ -96,8 +110,9 @@ private:
     inline void refresh_colored_chunks(int target_frame);
     inline void cursor_hop(int target_frame, unsigned int x, unsigned int y);
     void color_to_string(COLOR clr, char* target);
-    char cursor_pos_placeholder[10] = "\x1b[00;000H";
+    char cursor_pos_placeholder[10] = "\x1b[01;001H";
     void refresh_render_code(COLOR palette_[], int target_frame);
+    void refresh_bitmask(int target_frame);
     POINT_e coords;
     ANIMATION animation;
     VIEW view;
@@ -107,7 +122,7 @@ public:
     POINT_e frame_size;
     unsigned int label = 0;
     CELL*** frames = nullptr;
-    PREVS previous_pos;
+    int_64*** bitmask = nullptr;
 
     void DEBUG_sprite();
     void DEBUG_render_code();
@@ -117,8 +132,8 @@ public:
     bool is_colliding(const Sprite& sprite, const char characters[], unsigned int sz) const;
     POINT_e get_coords() const;
     void set_coords(int x, int y);
-    void add_x(int x);
-    void add_y(int y);
+    void add_x(int delta_x);
+    void add_y(int delta_y);
     ANIMATION get_animation() const;
     void start_animation();
     void stop_animation();
@@ -134,7 +149,6 @@ public:
     void transparent_space(bool condition);
     void set_stage(int z_index);
     void refresh();
-
     void init_by_file(const char file_name[]);
     Sprite(unsigned int lbl);
     void sprite_init();
@@ -177,18 +191,21 @@ public:
 class Window
 {
 private:
-    const unsigned int total_buffer_size = WINDOWHEIGHT * WINDOWLENGTH * BUFFERMULTIPLIER * MAXNROFSPRITES;
-    CHAR_INFO clear_buffer[WINDOWLENGTH * WINDOWHEIGHT];
-    SMALL_RECT write_region;
+    char clear_array[WINDOWLENGTH];
+    BUFFER buffer;
+    BUFFER clear_buffer;
+    RENDERER renderer;
+    int_64 temp_bitmask[WINDOWHEIGHT][global_bitmask_groups];
+    int_64 global_bitmask[WINDOWHEIGHT][global_bitmask_groups];
     char cursor_pos_placeholder[10] = "\x1b[00;000H";
     inline void inject_cursor_coords(const Sprite& sprite, int traversed);
     inline void render_all(int c_index, int traversed);
-    void init_clear_buffer();
-    inline void clear_rectangle(POINT_e upper_left, POINT_e lower_right);
+    void init_clear_array();
+    inline void update_global_bitmask(const Sprite& sprite);
+    void print_buffer();
+    inline void clear_screen();
 public:
     POINT_e screen_size, font_size;
-    BUFFER buffer;
-    RENDERER renderer;
 
     void clean_renderer();
     void empty_renderer();
@@ -198,9 +215,6 @@ public:
     void remove_sprite_from_renderer(Sprite* sprite);
     void remove_sprites_from_renderer(Sprite** sprites, unsigned int sz);
     void remove_sprites_from_renderer(std::function<bool(Sprite*)> condition);
-
-    void print_buffer();
-    inline void clear_screen();
 
     void DEBUG_fill();
     void DEBUG_buffer();

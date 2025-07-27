@@ -1,7 +1,9 @@
 For exe using jaft:
 C:\msys64\mingw64.exe
 cd /c/Users/gabri/Desktop/projects/asciiengine/build/
-g++ -fdiagnostics-color=always -g main.cpp -L../lib -ljaft -static-libstdc++ -static-libgcc -mconsole -o build.exe
+g++ -fdiagnostics-color=always main.cpp -L../lib -ljaft -static-libstdc++ -static-libgcc -mconsole -o build.exe
+g++ -fdiagnostics-color=always sprite_editor.cpp -L../lib -ljaft -static-libstdc++ -static-libgcc -mconsole -o sprite_editor.exe
+g++ ../src/main.cpp -L../lib -ljaft -static-libstdc++ -static-libgcc -mconsole -o build.exe
 
 For lib:
 g++ -c jaft.cpp -o jaft.o
