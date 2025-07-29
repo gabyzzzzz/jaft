@@ -168,7 +168,7 @@ std::vector<std::string> tokenize_input(std::string input) {
         if (input[i] == ' ') {
             if (!t.empty()) ret_val.push_back(t);
             t.clear();
-        } else if (isprint(input[i])) t += input[i];
+        } else if (input[i] != '\n' && input[i] != '\t' && input[i] != '\r' && input[i] != '\v' && input[i] != '\f') t += input[i];
     }
     if (!t.empty()) ret_val.push_back(t);
     return ret_val;
