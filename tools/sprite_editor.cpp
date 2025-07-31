@@ -36,6 +36,10 @@ struct rectangle {
     unsigned int x1, y1, x2, y2;
 };
 
+struct {
+    std::string r = "0", g = "0", b = "0";
+} global_background_color;
+
 Sprite brush(0); //    The literal brush you use for "painting"
 Sprite* canvas = new Sprite(1);
 Window window;
@@ -236,9 +240,15 @@ bool confirm_unsaved() {
     return true;
 }
 
+bool valid_color(int color) {
+    if (color < 0 || color > 256) return false;
+    else return true;
+}
+
 //  Main loop on cli
 void get_command() {
     //  Clear screen, reset cursor and color
+    std::cout << "\x1b[49m" << std::flush;
     std::cout << "\x1b[2J\x1b[H" << std::flush; 
     reset_color();
     window.set_font_settings(15, 15);
@@ -474,17 +484,17 @@ void get_command() {
             stoi(tokens[3]),
             stoi(tokens[4])
         };
-        if (temp.r < 0 || temp.r > 255) {
+        if (temp.r < 0 || temp.r > 256) {
             std::cout << "[SPRITE_EDITOR] Invalid color!\n";
             std::cout << "[SPRITE_EDITOR] Every color value must be an integer lower than 257 and greater or equal to 0.\n";
             continue;
         }
-        if (temp.g < 0 || temp.b > 255) {
+        if (temp.g < 0 || temp.b > 256) {
             std::cout << "[SPRITE_EDITOR] Invalid color!\n";
             std::cout << "[SPRITE_EDITOR] Every color value must be an integer lower than 257 and greater or equal to 0.\n";
             continue;
         }
-        if (temp.b < 0 || temp.b > 255) {
+        if (temp.b < 0 || temp.b > 256) {
             std::cout << "[SPRITE_EDITOR] Invalid color!\n";
             std::cout << "[SPRITE_EDITOR] Every color value must be an integer lower than 257 and greater or equal to 0.\n";
             continue;
@@ -570,7 +580,7 @@ void get_command() {
         for (int i = 0; i < palette_size; i++) {
             int r, g, b;
             in >> r >> g >> b;
-            if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+            if (r < 0 || r > 256 || g < 0 || g > 256 || b < 0 || b > 256) {
                 std::cout << "[SPRITE_EDITOR] Invalid color in palette file.\n"; 
                 std::cout << "[SPRITE_EDITOR] Every color value must be an integer lower than 256 and greater or equal to 0.\n";
                 continue;
@@ -591,7 +601,7 @@ void get_command() {
         int palette_size = stoi(tokens[1]);
         if (palette_size < 0 || palette_size > MAXNROFCOLORS) {
             std::cout << "[SPRITE_EDITOR] Invalid nr of colors.\n";
-            std::cout << "[SPRITE_EDITOR] Nr of colors must be a integer lower than " << MAXNROFCOLORS << "and greater or equal than 0.";
+            std::cout << "[SPRITE_EDITOR] Nr of colors must be a integer lower than " << MAXNROFCOLORS << "and greater or equal than 0.\n";
             continue;
         }
         for (int i = 0; i < palette_size; i++) {
@@ -600,12 +610,37 @@ void get_command() {
         }
         canvas->refresh();
         brush.refresh();
-        std::cout << "[SPRITE_RENDERER] Successfully applied changes to palette.\n";
+        std::cout << "[SPRITE_EDITOR] Successfully applied changes to palette.\n";
         continue;
     }
 
     if (tokens[0] == "clear") {
         std::cout << "\x1b[2J\x1b[H" << std::flush;
+        continue;
+    }
+
+    if (tokens[0] == "setbg") {
+        if (tokens.size() < 4) {
+            std::cout << "[SPRITE_EDITOR] Not enough arguments! Arguments should be a color in RGB format.\n";
+            continue;
+        }
+        COLOR background_color = {
+            stoi(tokens[1]), 
+            stoi(tokens[2]), 
+            stoi(tokens[3])
+        };
+        bool valid_parameters = (
+            valid_color(background_color.r) && 
+            valid_color(background_color.g) && 
+            valid_color(background_color.b)
+        );
+        if (valid_parameters) {
+            global_background_color = { tokens[1], tokens[2], tokens[3] };
+        } else {
+            std::cout << "[SPRITE_EDITOR] Invalid color!\n";
+            std::cout << "[SPRITE_EDITOR] Every color value must be an integer lower than 257 and greater or equal to 0.\n";
+            continue;
+        }
         continue;
     }
 
@@ -621,11 +656,11 @@ void get_command() {
     });
     window.add_sprite_to_renderer(canvas);
     brush.set_coords(0, 0);
-    brush.show();
 
     unsigned int font_h = (double) (window.screen_size.y / FONT_RATIO_HEIGHT);
     unsigned int font_w = (double) (window.screen_size.x / FONT_RATIO_LENGTH);
     window.set_font_settings(font_h, font_w);
+    std::cout << "\x1b[48;2;" << global_background_color.r << ';' << global_background_color.g << ';' << global_background_color.b << 'm';
     std::cout << "\x1b[2J\x1b[H" << std::flush;
 }
 

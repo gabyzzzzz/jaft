@@ -322,7 +322,6 @@ inline void jaft::Window::clear_screen() {
     _write(1, clear_buffer.value, clear_buffer.size); 
     if (clear_buffer.size > 0) {
         clear_buffer.value[clear_buffer.size] = '\0';
-        lg << clear_buffer.value << std::endl;
     }
 }
 
