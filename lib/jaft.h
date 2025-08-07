@@ -10,13 +10,12 @@ typedef unsigned long long int_64;
 
 /*
 
-JAFT LIBRARY, VERSION 0.2.0, 3TH JULY 2025
-MADE BY G@BY
+JAFT LIBRARY, VERSION 0.2.0
 
 JAFT IS A LIGHTWEIGHT LIBRARY INTENDED TO BE USED FOR C++ CONSOLE GAMES OR APPLICATIONS THAT USE TEXT BASED USER INTERFACES.
 IT WORKS WITH CUSTOM SPRITE OBJECTS THAT CANNOT BE CREATED WITHOUT PROPER SOFTWARE.
 
-JAFT WAS MADE USING ISO C++14 STANDARD
+ISO C++14 STANDARD
 
 */
 
@@ -106,6 +105,7 @@ struct SRENDERER {
 class Sprite
 {
 private:
+    void free_memory();
     void alocate_memory();
     inline void refresh_colored_chunks(int target_frame);
     inline void cursor_hop(int target_frame, unsigned int x, unsigned int y);
@@ -127,6 +127,7 @@ public:
     void DEBUG_sprite();
     void DEBUG_render_code();
 
+    void resize(POINT_e frame_sizes, int nr_of_frames);
     void next_game_tick();
     bool is_colliding(const Sprite& sprite) const;
     bool is_colliding(const Sprite& sprite, const char characters[], unsigned int sz) const;

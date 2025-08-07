@@ -56,7 +56,7 @@ void jaft::Sprite::init_by_file(const char file_name[]) {
         renderer.palette = new COLOR[renderer.nr_of_colors];
         for (int i = 0; i < renderer.nr_of_colors; i++) in >> renderer.palette[i].r >> renderer.palette[i].g >> renderer.palette[i].b;
         unsigned int nrf = animation.nr_of_frames;
-        frames = new CELL * *[nrf];
+        frames = new CELL**[nrf];
         for (unsigned int f = 0; f < nrf; f++) {
             frames[f] = new CELL * [frame_size.y + 1];
             for (unsigned int h = 0; h < frame_size.y; h++) {
@@ -83,13 +83,13 @@ void jaft::Sprite::sprite_init() {
 
         unsigned int nfr = animation.nr_of_frames;
         POINT_e fsz = frame_size;
-        frames = new CELL * *[nfr];
+        frames = new CELL**[nfr];
         renderer.palette = new COLOR[renderer.nr_of_colors];
         for (int i = 0; i < renderer.nr_of_colors; i++) {
             renderer.palette[i] = { 255, 0, 0 };
         }
         for (unsigned int f = 0; f < nfr; f++) {
-            frames[f] = new CELL * [fsz.y + 1];
+            frames[f] = new CELL*[fsz.y + 1];
             for (unsigned int h = 0; h < fsz.y; h++) {
                 frames[f][h] = new CELL[fsz.x + 1];
                 for (unsigned int w = 0; w < fsz.x; w++) frames[f][h][w] = { 0, ' ' };
@@ -105,17 +105,15 @@ void jaft::Sprite::sprite_init() {
     alocate_memory();
 }
 
-jaft::Sprite::~Sprite() {
+void jaft::Sprite::free_memory() {
     unsigned int nfr = animation.nr_of_frames;
     POINT_e fsz = frame_size;
-
-    for (unsigned int f = 0; f < nfr; ++f) {
-        for (unsigned int y = 0; y < fsz.y; ++y)
+    for (unsigned int f = 0; f < nfr; f++) {
+        for (unsigned int y = 0; y < fsz.y; y++)
             delete[] frames[f][y];
         delete[] frames[f];
     }
     delete[] frames;
-
     for (unsigned int i = 0; i < renderer.nr_of_colors; i++) {
         for (unsigned int j = 0; j < animation.nr_of_frames; j++)
             delete[] renderer.colored_chunks.container[i][j];
@@ -123,7 +121,6 @@ jaft::Sprite::~Sprite() {
     }
     delete[] renderer.colored_chunks.container;
     delete[] renderer.colored_chunks.size;
-
     for (unsigned int i = 0; i < animation.nr_of_frames; i++) {
         delete[] renderer.value[i];
         delete[] renderer.cursor_hops.indexes[i];
@@ -137,8 +134,11 @@ jaft::Sprite::~Sprite() {
     delete[] bitmask;
     delete[] renderer.cursor_hops.indexes;
     delete[] renderer.cursor_hops.size;
-
     delete[] renderer.palette;
+}
+
+jaft::Sprite::~Sprite() {
+    free_memory();
 }
 
 jaft::Sprite::Sprite() = default;
@@ -407,4 +407,29 @@ void jaft::Sprite::refresh() {
     }
     status.modified = true;
     status.coord_changed = true;
+}
+
+void jaft::Sprite::resize(POINT_e frame_sizes, int nr_of_frames) {
+    CELL*** new_frames = new CELL**[nr_of_frames];
+    for (int f = 0; f < nr_of_frames; f++) {
+        new_frames[f] = new CELL*[frame_sizes.y + 1];
+        for (int y = 0; y < frame_sizes.y; y++) {
+            new_frames[f][y] = new CELL[frame_sizes.x + 1];
+            for (int x = 0; x < frame_sizes.x; x++) {
+                if (x < frame_size.x && y < frame_size.y && f < animation.nr_of_frames) new_frames[f][y][x] = frames[f][y][x];
+                else new_frames[f][y][x] = {0, ' '};
+            }
+        }
+    }  
+    COLOR* palette = new COLOR[renderer.nr_of_colors];
+    for (int c = 0; c < renderer.nr_of_colors; c++) palette[c] = renderer.palette[c];
+    free_memory();
+    frames = new_frames;
+    frame_size = frame_sizes;
+    animation.nr_of_frames = nr_of_frames;
+    alocate_memory();
+    for (int c = 0; c < renderer.nr_of_colors; c++)  renderer.palette[c] = palette[c];
+    refresh();
+    delete[] palette;
+    return;
 }

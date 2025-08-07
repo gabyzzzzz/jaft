@@ -139,8 +139,8 @@ jaft::Window::Window() {
     }
     std::ios_base::sync_with_stdio(false);
     screen_size.y = GetSystemMetrics(SM_CYFULLSCREEN); screen_size.x = GetSystemMetrics(SM_CXFULLSCREEN);
-    unsigned int font_h = round((double)screen_size.y / FONT_RATIO_HEIGHT);
-    unsigned int font_w = round((double)screen_size.x / FONT_RATIO_LENGTH);
+    unsigned int font_h = ((double)screen_size.y) / FONT_RATIO_HEIGHT;
+    unsigned int font_w = ((double)screen_size.x) / FONT_RATIO_LENGTH;
     set_font_settings(font_h, font_w);
     maximize_console();
     disable_console_resize();

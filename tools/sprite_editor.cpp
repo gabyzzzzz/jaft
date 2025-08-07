@@ -165,6 +165,7 @@ void redo () {
 
 //  Divides input into tokens separated by spaces
 std::vector<std::string> tokenize_input(std::string input) {
+    if (input.empty()) return {0};
     std::vector<std::string> ret_val;
     std::string t;
     int sz = input.size();
@@ -226,20 +227,6 @@ rectangle get_drawing(Sprite* source) {
     return rt_val;
 }
 
-//  Confirms unsaved file
-bool confirm_unsaved() {
-    if (!saved) {
-        char choice;
-        std::cout << "[SPRITE_EDITOR] You didn't save your current work. Do you wish to proceed? y/n \n>_ ";
-        std::cin >> choice;
-        if (choice != 'y' && choice != 'Y') {
-            std::cout << "[SPRITE_EDITOR] Command aborted.\n";
-            return false;
-        }
-    }
-    return true;
-}
-
 bool valid_color(int color) {
     if (color < 0 || color > 256) return false;
     else return true;
@@ -267,27 +254,32 @@ void get_command() {
     if (tokens[0] == "open") {
         //  Opening file
         if (tokens.size() < 2) { std::cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
-        if (confirm_unsaved()) {
-            //  Set current path
-            std::string conct = crdir + tokens[1];
-            char file_name[101];
-            strncpy(file_name, conct.c_str(), conct.size());
-            if (conct.size() < 101) file_name[conct.size()] = '\0';
-            else file_name[100] = '\0';
-            std::ifstream in(file_name);
-            if (!(in.is_open())) {
-                std::cout << "[SPRITE_EDITOR] Could not find specified file \"" + conct << "\"\n";
-            } else {
-                redo_stack.clear();
-                undo_stack.clear();
-                delete canvas;
-                canvas = nullptr;
-                canvas = new Sprite(file_name, 1);
-                std::cout << "[SPRITE_EDITOR] Successfully opened file.\n";
-                crfile = tokens[1];
-                canvas->refresh();
-                in.close();
+        //  Set current path
+        std::string conct = crdir + tokens[1];
+        char file_name[101];
+        strncpy(file_name, conct.c_str(), conct.size());
+        if (conct.size() < 101) file_name[conct.size()] = '\0';
+        else file_name[100] = '\0';
+        std::ifstream in(file_name);
+        if (!(in.is_open())) {
+            std::cout << "[SPRITE_EDITOR] Could not find specified file \"" + conct << "\"\n";
+            in.close();
+            continue;
+        } else {
+            redo_stack.clear();
+            undo_stack.clear();
+            window.remove_sprite_from_renderer(canvas);
+            delete canvas;
+            canvas = nullptr;
+            in.close();
+            canvas = new Sprite(file_name, 1);
+            std::cout << "[SPRITE_EDITOR] Successfully opened file.\n";
+            for (int i = 0; i < MAXNROFCOLORS; i++) {
+                current_palette[i] = canvas->get_srenderer().palette[i];
             }
+            crfile = tokens[1];
+            canvas->refresh();
+            window.add_sprite_to_renderer(canvas);
         }
         continue;
     }
@@ -295,33 +287,33 @@ void get_command() {
     if (tokens[0] == "create") {
         //  Opening file
         if (tokens.size() < 3 || (tokens.size() > 3 && tokens.size() < 5)) { std::cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
-        if (confirm_unsaved()) {
-            std::string conct = crdir + tokens[1];
-            char file_name[101];
-            strncpy(file_name, conct.c_str(), conct.size());
-            if (conct.size() < 101) file_name[conct.size()] = '\0';
-            else file_name[100] = '\0';
-            std::ofstream out(file_name);
-            if (!(out.is_open())) { std::cout << "[SPRITE_EDITOR] Could not create the file. Aborting...\n"; continue; }
-            redo_stack.clear();
-            undo_stack.clear();
-            delete canvas;
-            canvas = nullptr;
-            canvas = new Sprite(1);
-            canvas->set_nr_of_frames(stoi(tokens[2]));
-            if (tokens.size() > 3) {
-                canvas->frame_size.y = stoi(tokens[3]);
-                canvas->frame_size.x = stoi(tokens[4]);
-            } else {
-                canvas->frame_size.y = WINDOWHEIGHT;
-                canvas->frame_size.x = WINDOWLENGTH; 
-            }
-            canvas->set_stage(0);
-            canvas->sprite_init();
-            std::cout << "[SPRITE_EDITOR] Successfully created file.\n";
-            crfile = tokens[1];
+        std::string conct = crdir + tokens[1];
+        char file_name[101];
+        strncpy(file_name, conct.c_str(), conct.size());
+        if (conct.size() < 101) file_name[conct.size()] = '\0';
+        else file_name[100] = '\0';
+        std::ofstream out(file_name);
+        if (!(out.is_open())) { std::cout << "[SPRITE_EDITOR] Could not create the file. Aborting...\n"; out.close(); continue; }
+        out.close();
+        redo_stack.clear();
+        undo_stack.clear();
+        window.remove_sprite_from_renderer(canvas);
+        delete canvas;
+        canvas = new Sprite(1);
+        canvas->transparent_space(true);
+        canvas->set_stage(0);
+        canvas->set_nr_of_frames(stoi(tokens[2]));
+        if (tokens.size() > 3) {
+            canvas->frame_size.y = stoi(tokens[3]);
+            canvas->frame_size.x = stoi(tokens[4]);
+        } else {
+            canvas->frame_size.y = WINDOWHEIGHT;
+            canvas->frame_size.x = WINDOWLENGTH; 
         }
-
+        canvas->sprite_init();
+        window.add_sprite_to_renderer(canvas);
+        std::cout << "[SPRITE_EDITOR] Successfully created file.\n";
+        crfile = tokens[1];
         continue;
     }
 
@@ -339,7 +331,7 @@ void get_command() {
         continue;
     }
 
-    if (tokens[0] == "setchar") {
+    if (tokens[0] == "cc") {
         if (tokens.size() < 2) { std::cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
         if (tokens[1] == "32") brush.frames[0][0][0].character = ' ';
         else brush.frames[0][0][0].character = tokens[1][0];
@@ -347,10 +339,16 @@ void get_command() {
         continue;
     }
 
-    if (tokens[0] == "color") {
+    if (tokens[0] == "c") {
         if (tokens.size() < 2) { std::cout << "[SPRITE_EDITOR] Not enough arguments!\n"; continue; }
-        int set_color_id = stoi(tokens[1]);
-        if (set_color_id < 0 || set_color_id > MAXNROFCOLORS) {
+        int set_color_id;
+        try {
+            set_color_id = stoi(tokens[1]);
+            if ((set_color_id < 0 || set_color_id > MAXNROFCOLORS)) {
+                throw std::out_of_range("Arguments out of range");
+            }
+        }
+        catch (const std::exception &e){
             std::cout << "[SPRITE_EDITOR] Invalid argument! color_id must be an integer with a value between 0 and " << MAXNROFCOLORS << ".\n";
             continue;
         }
@@ -467,7 +465,7 @@ void get_command() {
     }
 
     //  Sets a color from sprites palette to input
-    if (tokens[0] == "setcolor") {
+    if (tokens[0] == "sc") {
         if (tokens.size() < 5) {
             std::cout << "[SPRITE_EDITOR] Not enough arguments!\n";
             std::cout << "[SPRITE_EDITOR] Arguments for setcolor are: color_id, color.r, color.g, color.b\n";
@@ -506,28 +504,12 @@ void get_command() {
         std::cout << current_palette[color_id].g << ';';
         std::cout << current_palette[color_id].b << "m#\n";
         reset_color();
-        continue;
-    }
-
-    if (tokens[0] == "createpalette") {
-        if (tokens.size() < 2) {
-            std::cout << "[SPRITE_EDITOR] Not enough arguments!\n";
-            std::cout << "[SPRITE_EDITOR] Arguments for createpalette are: name\n";
-            continue;
-        } 
-        std::ofstream out(crdir + tokens[1]);
-        if (!out.is_open()) {
-            std::cout << "[SPRITE_EDITOR] Couldn't open file " << crdir + tokens[1] << '\n';
-            continue;
+        for (int i = 0; i < MAXNROFCOLORS; i++) {
+            canvas->get_srenderer().palette[i] = current_palette[i];
+            brush.get_srenderer().palette[i] = current_palette[i];
         }
-        out.close();
-        if (confirm_unsaved()) {
-            COLOR default_color = { 255, 0, 0 };
-            for (int i = 0; i < MAXNROFCOLORS; i++) 
-                current_palette[i] = default_color;
-        }
-        palette_dir = crdir + tokens[1];
-        std::cout << "[SPRITE_EDITOR] Successfully created new palette with path: " << crdir + tokens[1] << '\n';
+        canvas->refresh();
+        brush.refresh();
         continue;
     }
 
@@ -543,7 +525,7 @@ void get_command() {
             std::cout << "[SPRITE_EDITOR] Nr of colors must be a integer lower than " << MAXNROFCOLORS << "and greater or equal than 0.";
             continue;
         }
-        std::string save_path = palette_dir.empty() ? (crdir + "palette.txt") : palette_dir;
+        std::string save_path = palette_dir.empty() ? (crdir + "palette.txt") : (crdir + palette_dir);
         std::ofstream out(save_path);
         if (!out.is_open()) {
             std::cout << "[SPRITE_EDITOR] Couldn't open file " << save_path << '\n';
@@ -589,6 +571,7 @@ void get_command() {
         }  
         in.close();
         std::cout << "[SPRITE_EDITOR] Successfully loaded palette from " << crdir + tokens[1] << '\n';
+        continue;
     }
 
 
@@ -644,7 +627,36 @@ void get_command() {
         continue;
     }
 
-    if (tokens[0] == "esc") if (confirm_unsaved()) exit(0);
+    if (tokens[0] == "resize") {
+        if (tokens.size() < 4) {
+            std::cout << "[SPRITE_EDITOR] Not enough arguments! Arguments should be: frame_size.y, frame_size.x, nr_of_frames.\n";
+            continue;
+        }
+        int new_nr_of_frames;
+        POINT_e new_frame_size;
+        try {
+            new_frame_size = {
+                (unsigned) stoi(tokens[3]),
+                (unsigned) stoi(tokens[2])
+            }; 
+            new_nr_of_frames = stoi(tokens[1]);
+            bool valid_frame_x = new_frame_size.x < WINDOWLENGTH + 1 && new_frame_size.x > 0;
+            bool valid_frame_y = new_frame_size.y < WINDOWHEIGHT + 1 && new_frame_size.y > 0;
+            bool condition = new_nr_of_frames <= 0 || valid_frame_x || valid_frame_y;
+            if (!condition) throw std::out_of_range("Arguments out of range");
+        }
+        catch (const std::exception &e) {
+            std::cout << "[SPRITE_EDITOR] Arguments should be 3 integers, frame_size.y, frame_size.x, nr_of_frames.\n";
+            std::cout << 0 + " < frame_size.x < " + (WINDOWLENGTH + 1) << '\n';
+            std::cout << 0 + " < frame_Size.y < " + (WINDOWHEIGHT + 1) << '\n';
+            std::cout << 0 + " < nr_of_frames" << '\n';
+            continue;
+        }
+        canvas->resize(new_frame_size, new_nr_of_frames);
+        continue;
+    }
+
+    if (tokens[0] == "esc") exit(0);
 
     if (tokens[0] != "exit") std::cout << "[SPRITE_EDITOR] Invalid command \"" + tokens[0] + "\"\n";
 
@@ -882,7 +894,7 @@ int main() {
     selection_s.get_srenderer().palette[0] = {100, 100, 100};
 
     //  Canvas
-    canvas->transparent_space(false);
+    canvas->transparent_space(true);
     canvas->set_stage(0);
     canvas->frame_size = {WINDOWLENGTH, WINDOWHEIGHT};
     canvas->set_nr_of_frames(1);
