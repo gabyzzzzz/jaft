@@ -1,47 +1,100 @@
 #include "libraries.h"
 #include "../lib/jaft.h"
 
+void jaft::Sprite::init_memory() {
+    for (int f = 0; f < animation.nr_of_frames; f++)
+        for (int y = 0; y < frame_size.y; y++)
+            for (int x = 0; x < frame_size.x; x++)
+                frames[f][y][x] = {0, ' '};
+    
+    for (int i = 0; i < animation.nr_of_frames; i++) 
+        renderer.size[i] = 0;
+
+    for (int i = 0; i < renderer.nr_of_colors; i++) {
+        for (int j = 0; j < animation.nr_of_frames; j++) 
+            renderer.colored_chunks.size[i][j] = 0;  
+    }
+
+    for (int i = 0; i < animation.nr_of_frames; i++) 
+        renderer.cursor_hops.size[i] = 0;
+
+    int size_bitmask_x = (frame_size.x + 63) / 64;
+    for (int i = 0; i < animation.nr_of_frames; i++) 
+        for (int j = 0; j < frame_size.y; j++) 
+            for (int k = 0; k < size_bitmask_x; k++) 
+                bitmask[i][j][k] = 0;
+}
+
 void jaft::Sprite::alocate_memory() {
     try {
 
-        renderer.value = new char* [animation.nr_of_frames];
-        for (unsigned int i = 0; i < animation.nr_of_frames; i++) renderer.value[i] = new char[BUFFERMULTIPLIER * frame_size.x * frame_size.y + 2];
-        renderer.size = new size_t[animation.nr_of_frames];
-        for (unsigned int i = 0; i < animation.nr_of_frames; i++) renderer.size[i] = 0;
-        renderer.colored_chunks.container = new SBIT** [renderer.nr_of_colors];
-        for (unsigned int i = 0; i < renderer.nr_of_colors; i++) {
-            renderer.colored_chunks.container[i] = new SBIT* [animation.nr_of_frames];
-            for (unsigned int j = 0; j < animation.nr_of_frames; j++) renderer.colored_chunks.container[i][j] = new SBIT[frame_size.x * frame_size.y + 2];
-        }
-        renderer.colored_chunks.size = new size_t* [renderer.nr_of_colors];
-        for (unsigned int i = 0; i < renderer.nr_of_colors; i++) renderer.colored_chunks.size[i] = new size_t[animation.nr_of_frames];
-        for (unsigned int i = 0; i < renderer.nr_of_colors; i++) {
-            for (unsigned int j = 0; j < animation.nr_of_frames; j++) {
-                renderer.colored_chunks.size[i][j] = 0;
-            }
-        }
-        renderer.cursor_hops.size = new size_t[animation.nr_of_frames];
-        for (unsigned int i = 0; i < animation.nr_of_frames; i++) renderer.cursor_hops.size[i] = 0;
-        renderer.cursor_hops.indexes = new int* [animation.nr_of_frames];
-        renderer.cursor_hops.values = new POINT_e* [animation.nr_of_frames];
-        for (unsigned int i = 0; i < animation.nr_of_frames; i++) {
-            renderer.cursor_hops.indexes[i] = new int[frame_size.x * frame_size.y + 2];
-            renderer.cursor_hops.values[i] = new POINT_e[frame_size.x * frame_size.y + 2];
-        }
-        bitmask = new int_64**[animation.nr_of_frames];
-        int size_bitmask_x = (frame_size.x + 63) / 64;
-        for (int i = 0; i < animation.nr_of_frames; i++) {
-            bitmask[i] = new int_64*[frame_size.y];
-            for (int j = 0; j < frame_size.y; j++) {
-                bitmask[i][j] = new int_64[size_bitmask_x];
-                for (int k = 0; k < size_bitmask_x; k++) bitmask[i][j][k] = 0;
-            }
-        }
+        renderer.palette = (COLOR*) allocate_vector(
+            renderer.nr_of_colors,
+            sizeof(COLOR)
+        );
+
+        frames = (CELL***) allocate_tensor(
+            animation.nr_of_frames,
+            frame_size.y,
+            frame_size.x,
+            sizeof(CELL)
+        );
+
+        renderer.value = (char**) allocate_matrix(
+            animation.nr_of_frames, 
+            BUFFERMULTIPLIER * frame_size.x * frame_size.y + 2,
+            sizeof(char)
+        );
+       
+        renderer.size = (size_t*) allocate_vector(
+            animation.nr_of_frames, 
+            sizeof(size_t)
+        );
+
+        renderer.colored_chunks.container = (SBIT***) allocate_tensor(
+            renderer.nr_of_colors, 
+            animation.nr_of_frames, 
+            frame_size.x * frame_size.y + 2, 
+            sizeof(SBIT)
+        );
+
+        renderer.colored_chunks.size = (size_t**) allocate_matrix(
+            renderer.nr_of_colors,
+            animation.nr_of_frames,
+            sizeof(size_t)
+        );
+
+        renderer.cursor_hops.size = (size_t*) allocate_vector(
+            animation.nr_of_frames,
+            sizeof(size_t)
+        );
+
+        renderer.cursor_hops.indexes = (int**) allocate_matrix(
+            animation.nr_of_frames,
+            frame_size.x * frame_size.y + 2,
+            sizeof(int)
+        );
+
+        renderer.cursor_hops.values = (POINT_e**) allocate_matrix(
+            animation.nr_of_frames,
+            frame_size.x * frame_size.y + 2,
+            sizeof(POINT_e)
+        );
+
+        bitmask = (int_64***) allocate_tensor(
+            animation.nr_of_frames,
+            frame_size.y,
+            (frame_size.x + 63) / 64,
+            sizeof(int_64)
+        );
+
     }
 
     catch (const std::bad_alloc& e) {
         std::cout << "[JAFT] Failed alocating memory for sprite with label " << label << ". " << e.what() << std::endl;
     }
+
+    init_memory();
 
     refresh();
 }
@@ -53,21 +106,15 @@ void jaft::Sprite::init_by_file(const char file_name[]) {
         if (!in.is_open()) log(401, label);
         if (!(in >> frame_size.y >> frame_size.x >> animation.nr_of_frames >> renderer.nr_of_colors)) log(402, label);
         if (frame_size.y < 1 || frame_size.x < 1 || animation.nr_of_frames < 1 || renderer.nr_of_colors < 1) log(403, label);
-        renderer.palette = new COLOR[renderer.nr_of_colors];
+        alocate_memory();
+        int ch;
         for (int i = 0; i < renderer.nr_of_colors; i++) in >> renderer.palette[i].r >> renderer.palette[i].g >> renderer.palette[i].b;
-        unsigned int nrf = animation.nr_of_frames;
-        frames = new CELL**[nrf];
-        for (unsigned int f = 0; f < nrf; f++) {
-            frames[f] = new CELL * [frame_size.y + 1];
-            for (unsigned int h = 0; h < frame_size.y; h++) {
-                frames[f][h] = new CELL[frame_size.x + 1];
+        for (unsigned int f = 0; f < animation.nr_of_frames; f++) 
+            for (unsigned int h = 0; h < frame_size.y; h++) 
                 for (unsigned int w = 0; w < frame_size.x; w++) {
-                    int ch;
                     in >> frames[f][h][w].color_id >> ch;
                     frames[f][h][w].character = (char)ch;
                 }
-            }
-        }
 
     }
 
@@ -75,66 +122,71 @@ void jaft::Sprite::init_by_file(const char file_name[]) {
         std::cout << "[JAFT] Failed alocating memory for sprite with label " << label << ". " << e.what() << std::endl;
     }
 
-    alocate_memory();
 }
 
 void jaft::Sprite::sprite_init() {
     try {
-
-        unsigned int nfr = animation.nr_of_frames;
-        POINT_e fsz = frame_size;
-        frames = new CELL**[nfr];
-        renderer.palette = new COLOR[renderer.nr_of_colors];
-        for (int i = 0; i < renderer.nr_of_colors; i++) {
-            renderer.palette[i] = { 255, 0, 0 };
-        }
-        for (unsigned int f = 0; f < nfr; f++) {
-            frames[f] = new CELL*[fsz.y + 1];
-            for (unsigned int h = 0; h < fsz.y; h++) {
-                frames[f][h] = new CELL[fsz.x + 1];
-                for (unsigned int w = 0; w < fsz.x; w++) frames[f][h][w] = { 0, ' ' };
-            }
-        }
-
+        alocate_memory();
     }
 
     catch (const std::bad_alloc& e) {
         std::cout << "[JAFT] Failed alocating memory for sprite with label " << label << ". " << e.what() << std::endl;
     }
-
-    alocate_memory();
+    
 }
 
 void jaft::Sprite::free_memory() {
-    unsigned int nfr = animation.nr_of_frames;
-    POINT_e fsz = frame_size;
-    for (unsigned int f = 0; f < nfr; f++) {
-        for (unsigned int y = 0; y < fsz.y; y++)
-            delete[] frames[f][y];
-        delete[] frames[f];
-    }
-    delete[] frames;
-    for (unsigned int i = 0; i < renderer.nr_of_colors; i++) {
-        for (unsigned int j = 0; j < animation.nr_of_frames; j++)
-            delete[] renderer.colored_chunks.container[i][j];
-        delete[] renderer.colored_chunks.size[i];
-    }
-    delete[] renderer.colored_chunks.container;
-    delete[] renderer.colored_chunks.size;
-    for (unsigned int i = 0; i < animation.nr_of_frames; i++) {
-        delete[] renderer.value[i];
-        delete[] renderer.cursor_hops.indexes[i];
-        delete[] renderer.cursor_hops.values[i];
-        for (int j = 0; j < frame_size.y; j++) delete[] bitmask[i][j];
-        delete[] bitmask[i];
-    }
-    delete[] renderer.value;
-    delete[] renderer.size;
-    delete[] renderer.cursor_hops.values;
-    delete[] bitmask;
-    delete[] renderer.cursor_hops.indexes;
-    delete[] renderer.cursor_hops.size;
-    delete[] renderer.palette;
+
+    free_tensor(
+        frames,
+        animation.nr_of_frames,
+        frame_size.y
+    );
+
+    free_tensor(
+        bitmask,
+        animation.nr_of_frames,
+        frame_size.y
+    );
+
+    free_tensor(
+        renderer.colored_chunks.container,
+        renderer.nr_of_colors,
+        animation.nr_of_frames
+    );
+
+    free_matrix(
+        renderer.colored_chunks.size,
+        renderer.nr_of_colors
+    );
+    
+    free_matrix(
+        renderer.value,
+        animation.nr_of_frames
+    );
+
+    free_matrix(
+        renderer.cursor_hops.indexes,
+        animation.nr_of_frames
+    );
+
+    free_matrix(
+        renderer.cursor_hops.values,
+        animation.nr_of_frames
+    );
+
+    free_vector(
+        renderer.size
+    );
+
+    free_vector(
+        renderer.cursor_hops.size
+    );
+
+    free_vector(
+        renderer.palette
+    );
+    
 }
 
 jaft::Sprite::~Sprite() {
@@ -410,26 +462,34 @@ void jaft::Sprite::refresh() {
 }
 
 void jaft::Sprite::resize(POINT_e frame_sizes, int nr_of_frames) {
-    CELL*** new_frames = new CELL**[nr_of_frames];
-    for (int f = 0; f < nr_of_frames; f++) {
-        new_frames[f] = new CELL*[frame_sizes.y + 1];
-        for (int y = 0; y < frame_sizes.y; y++) {
-            new_frames[f][y] = new CELL[frame_sizes.x + 1];
+    CELL*** new_frames = (CELL***) allocate_tensor(
+        nr_of_frames,
+        frame_sizes.y,
+        frame_sizes.x,
+        sizeof(CELL)
+    ); 
+    for (int f = 0; f < nr_of_frames; f++)
+        for (int y = 0; y < frame_sizes.y; y++) 
             for (int x = 0; x < frame_sizes.x; x++) {
                 if (x < frame_size.x && y < frame_size.y && f < animation.nr_of_frames) new_frames[f][y][x] = frames[f][y][x];
-                else new_frames[f][y][x] = {0, ' '};
             }
-        }
-    }  
-    COLOR* palette = new COLOR[renderer.nr_of_colors];
+    COLOR* palette = (COLOR*) allocate_vector(
+        renderer.nr_of_colors,
+        sizeof(COLOR)
+    ); 
     for (int c = 0; c < renderer.nr_of_colors; c++) palette[c] = renderer.palette[c];
     free_memory();
-    frames = new_frames;
     frame_size = frame_sizes;
     animation.nr_of_frames = nr_of_frames;
     alocate_memory();
+    free_tensor(
+        frames,
+        animation.nr_of_frames,
+        frame_size.y
+    );
+    frames = new_frames;
     for (int c = 0; c < renderer.nr_of_colors; c++)  renderer.palette[c] = palette[c];
     refresh();
-    delete[] palette;
+    free_vector(palette);
     return;
 }

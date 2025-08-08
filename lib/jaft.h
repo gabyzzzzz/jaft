@@ -101,9 +101,28 @@ struct SRENDERER {
 
 //  Class declarations
 
+/*
+Dynamic memory alocations:
+
+-frames
+-bitmask
+-SRENDERER 
+
+*/
+
+
+template<typename T> void free_vector(T*& ptr);
+template<typename T> void free_matrix(T**& ptr, int lines);
+template<typename T> void free_tensor(T***& ptr, int depth, int lines);
+
+void* allocate_vector(int length, size_t type_size);
+void** allocate_matrix(int lines, int rows, size_t type_size);
+void*** allocate_tensor(int depth, int lines, int rows, size_t type_size);
+
 class Sprite
 {
 private:
+    void init_memory();
     void free_memory();
     void alocate_memory();
     inline void refresh_colored_chunks(int target_frame);

@@ -1,11 +1,11 @@
 For exe using jaft:
-g++ -fdiagnostics-color=always main.cpp -L../lib -ljaft -static-libstdc++ -static-libgcc -mconsole -o build.exe
-g++ -fdiagnostics-color=always sprite_editor.cpp -L../lib -ljaft -static-libstdc++ -static-libgcc -mconsole -o sprite_editor.exe
-g++ ../src/main.cpp -L../lib -ljaft -static-libstdc++ -static-libgcc -mconsole -o build.exe
+
+g++ -O2 -s main.cpp -L../lib -ljaft -static-libstdc++ -static-libgcc -mconsole -o build.exe
+g++ -O2 -s sprite_editor.cpp -L../lib -ljaft -static-libstdc++ -static-libgcc -mconsole -o sprite_editor.exe
 
 -O2 → Optimizes the binary 
 -s → Strips debug symbols 
 
 For lib:
-g++ -c jaft.cpp -o jaft.o
+g++ -O2 -s -c jaft.cpp -o jaft.o
 ar rcs libjaft.a jaft.o
